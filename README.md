@@ -2,7 +2,7 @@
 
 Dieses Plugin für unseren Loxberry installiert das Paket modbus-proxy. 
 
-In der Konfigurationsdatei unter /opt/loxberry/config/plugins/modbus-proxy/modbus-proxy.yml müssen bisher noch manuell die Modbus-Clients eingetragen werden. 
+In der Konfigurationsdatei unter /opt/loxberry/config/plugins/modbus-proxy/modbus-proxy.yml müssen bisher noch manuell die Modbus-TCP Geräte eingetragen werden. 
 
 Nach Änderung dieser Datei muss der Loxberry neugestartet werden.
 
