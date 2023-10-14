@@ -1,0 +1,31 @@
+devices:
+- modbus:
+    url: wago750849.fritz.box:502     # device url (mandatory)
+    timeout: 10                 # communication timeout (s) (optional, default: 10)
+    connection_time: 0.1        # delay after connection (s) (optional, default: 0)
+  listen:
+    bind: 0:9009                # listening address (mandatory)
+logging:
+  version: 1
+  formatters:
+    standard:
+      format: "%(asctime)s %(levelname)8s %(name)s: %(message)s"
+    error:
+        format: "%(levelname)s <PID %(process)d:%(processName)s> %(name)s.%(funcName)s(): %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: standard
+      
+    info_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: INFO
+        formatter: standard
+        filename: /opt/loxberry/log/plugins/modbus-proxy/modbus-proxy.log
+        maxBytes: 204.800 # 200 KB
+        backupCount: 1
+        encoding: utf8
+  root:
+    handlers: ['console','info_file_handler']
+    level: NOTSET

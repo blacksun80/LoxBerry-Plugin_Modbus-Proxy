@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# This is a sample DAEMON file which is started at boottime. 
+# CAUTION! MAKE SURE YOUR SCRIPT EXITS CLEANLY! It is a good idea
+# to start your daemon as background process. If you do something wrong here
+# your user's systems may hang forever during boottime!
+
+# Will be executed as user "root".
+
+# Name this file "daemon" in your plugin-archive. It will be renamed to NAME
+# during installation
+log="$LBPLOG/modbus-proxy/daemonstart.log"
+echo "Logfile: $log" >>$log
+
+echo "Modbus-Proxy Daemon start" >>$log
+
+configfile=$LBPCONFIG/modbus-proxy/modbus-proxy.yml
+echo "Configfile: $configfile" >>$log
+
+echo "Starte modbus-proxy" >>$log
+
+su loxberry -c "cd $LBPLOG/modbus-proxy ; /usr/local/bin/modbus-proxy --config-file $configfile &" >>$log 2>&1
+exit 0
