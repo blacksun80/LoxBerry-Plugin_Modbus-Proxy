@@ -22,3 +22,6 @@ PV-Wechselrichter erstellen.
 
 Die Modbus-TCP Clients können jetzt eine Modbus-TCP Verbindung auf den Loxberry, auf dem das Loxberry-Plugin_Modbus-Proxy Plugin läuft, aufbauen. Bei der Konfiguration für die Modbus-TCP Verbindung darauf achten, dass
 hier jetzt der Port 9009 verwendet werden muss. Modbus-Proxy erkennt die Anfrage und fragt nun die Register des PV-Wechselrichters ab.
+
+Mehr Informationen gibt es hier:
+https://pypi.org/project/modbus-proxy/
