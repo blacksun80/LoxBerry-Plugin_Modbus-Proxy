@@ -18,11 +18,24 @@ BACKUPDIR=/tmp/modbus-proxy_configbackup
 
 echo "<INFO> preroot.sh gestartet fuer $PSHNAME Version $PVERSION"
 
+# pip3 install kann je nach Netzwerk/Paketgroesse eine Weile dauern und gibt
+# selbst nichts aus - ohne Lebenszeichen wirkt das Installations-Log dann, als
+# waere es haengengeblieben. Deshalb waehrenddessen ein periodisches <INFO>.
+run_with_heartbeat() {
+	"$@" &
+	local cmdpid=$!
+	while kill -0 "$cmdpid" 2>/dev/null; do
+		sleep 15
+		echo "<INFO> ...laeuft noch (PID $cmdpid)"
+	done
+	wait "$cmdpid"
+}
+
 echo "<INFO> Installiere/aktualisiere Python-Paket modbus-proxy..."
-pip3 install --upgrade --break-system-packages "modbus-proxy[yaml]" 2>/tmp/modbus-proxy_pipinstall.log
+run_with_heartbeat pip3 install --upgrade --break-system-packages "modbus-proxy[yaml]" 2>/tmp/modbus-proxy_pipinstall.log
 if [ $? -ne 0 ]; then
 	# Manche Systeme kennen --break-system-packages nicht (aeltere pip-Version) - Fallback ohne dieses Flag.
-	pip3 install --upgrade "modbus-proxy[yaml]" 2>>/tmp/modbus-proxy_pipinstall.log
+	run_with_heartbeat pip3 install --upgrade "modbus-proxy[yaml]" 2>>/tmp/modbus-proxy_pipinstall.log
 fi
 if [ $? -ne 0 ]; then
 	echo "<WARNING> Installation von modbus-proxy per pip3 ist fehlgeschlagen. Details: /tmp/modbus-proxy_pipinstall.log"
