@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start/Stop/Restart/Status-Steuerung fuer den modbus-proxy-Dienst.
+# Start/Stop/Restart/Status-Steuerung für den modbus-proxy-Dienst.
 # Wird sowohl vom Boot-Daemon (system/daemons/plugins/modbus-proxy, als root)
 # als auch von der Plugin-GUI (als User loxberry) aufgerufen.
 #
@@ -19,7 +19,7 @@ log() {
 }
 
 as_runuser() {
-	# Fuehrt das uebergebene Kommando als $RUNUSER aus - direkt, wenn der
+	# Führt das übergebene Kommando als $RUNUSER aus - direkt, wenn der
 	# Aufrufer schon dieser User ist, sonst per su (z.B. wenn root aufruft).
 	if [ "$(id -un)" = "$RUNUSER" ]; then
 		bash -c "$1"
@@ -41,7 +41,7 @@ is_running() {
 do_start() {
 	mkdir -p "$LBPLOG/modbus-proxy"
 	if is_running; then
-		log "Start uebersprungen, laeuft bereits (PID $(cat "$PIDFILE"))"
+		log "Start übersprungen, läuft bereits (PID $(cat "$PIDFILE"))"
 		return 0
 	fi
 	if [ ! -x "$BINARY" ]; then
@@ -52,9 +52,9 @@ do_start() {
 		log "FEHLER: Konfigurationsdatei $CONFIGFILE fehlt"
 		return 1
 	fi
-	# Wichtig: "cd X && nohup CMD &" wuerde die gesamte &&-Kette als Subshell
-	# hintergrunden - "$!" waere dann die PID der Subshell, nicht des
-	# tatsaechlichen Prozesses. Deshalb hier ein einzelner Befehl ohne "&&".
+	# Wichtig: "cd X && nohup CMD &" würde die gesamte &&-Kette als Subshell
+	# hintergrunden - "$!" wäre dann die PID der Subshell, nicht des
+	# tatsächlichen Prozesses. Deshalb hier ein einzelner Befehl ohne "&&".
 	as_runuser "nohup $BINARY --config-file $CONFIGFILE >>$LOGFILE 2>&1 & echo \$! > $PIDFILE"
 	sleep 1
 	if is_running; then

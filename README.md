@@ -1,24 +1,24 @@
 # LoxBerry-Plugin: Modbus-Proxy
 
-Ein [LoxBerry](https://www.loxberry.de/)-Plugin mit grafischer Oberflaeche fuer den Python-Dienst
+Ein [LoxBerry](https://www.loxberry.de/)-Plugin mit grafischer Oberfläche für den Python-Dienst
 [**modbus-proxy**](https://pypi.org/project/modbus-proxy/) von Tiago Coutinho.
 
-Viele Modbus-TCP-Geraete (SPS, Waermepumpen-Regler, Zaehler, ...) erlauben nur eine sehr kleine
-Anzahl gleichzeitiger Verbindungen. modbus-proxy setzt sich als Bruecke dazwischen: mehrere
+Viele Modbus-TCP-Geräte (SPS, Wärmepumpen-Regler, Zähler, ...) erlauben nur eine sehr kleine
+Anzahl gleichzeitiger Verbindungen. modbus-proxy setzt sich als Brücke dazwischen: mehrere
 Clients (z.B. ein Loxone Miniserver, eine Visualisierung, ein Skript) verbinden sich mit dem
-Proxy, der die Anfragen seriell an das eigentliche Geraet weiterreicht.
+Proxy, der die Anfragen seriell an das eigentliche Gerät weiterreicht.
 
 ## Funktionen dieses Plugins
 
-- **Konfiguration per GUI** statt Handbearbeitung der YAML-Datei: beliebig viele Modbus-Geraete
-  mit Ziel-Adresse, Timeout, Verbindungsverzoegerung, Listen-Adresse und optionaler
+- **Konfiguration per GUI** statt Handbearbeitung der YAML-Datei: beliebig viele Modbus-Geräte
+  mit Ziel-Adresse, Timeout, Verbindungsverzögerung, Listen-Adresse und optionaler
   Unit-ID-Umleitung.
 - **Speichern** schreibt die Konfiguration und startet den Dienst automatisch neu, damit die
-  Aenderungen sofort aktiv sind.
-- **Status-Anzeige** (laeuft/gestoppt, PID, installierte modbus-proxy-Version, pro Geraet ob der
+  Änderungen sofort aktiv sind.
+- **Status-Anzeige** (läuft/gestoppt, PID, installierte modbus-proxy-Version, pro Gerät ob der
   Listen-Port erreichbar ist), aktualisiert sich automatisch alle 5 Sekunden.
 - **Start/Stopp/Neustart** des Dienstes direkt aus der GUI.
-- **Export/Import** der Konfiguration als YAML-Datei (Backup oder Uebertragung auf einen anderen
+- **Export/Import** der Konfiguration als YAML-Datei (Backup oder Übertragung auf einen anderen
   LoxBerry).
 - **Update-fest:** die Konfiguration bleibt bei einem Plugin-Update erhalten (wird vor dem
   Update gesichert und danach automatisch wiederhergestellt).
@@ -26,9 +26,9 @@ Proxy, der die Anfragen seriell an das eigentliche Geraet weiterreicht.
 
 ## Installation
 
-Ueber die LoxBerry-Pluginverwaltung als ZIP-Archiv installieren, oder die Update-URLs aus
-`plugin.cfg` fuer automatische Updates nutzen. Das Plugin installiert das Python-Paket
-`modbus-proxy` selbststaendig per `pip3` (Internetzugang des LoxBerry beim Installieren/Updaten
+Über die LoxBerry-Pluginverwaltung als ZIP-Archiv installieren, oder die Update-URLs aus
+`plugin.cfg` für automatische Updates nutzen. Das Plugin installiert das Python-Paket
+`modbus-proxy` selbstständig per `pip3` (Internetzugang des LoxBerry beim Installieren/Updaten
 erforderlich).
 
 ## Deinstallation

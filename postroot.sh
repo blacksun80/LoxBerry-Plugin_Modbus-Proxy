@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Laeuft als root, als allerletzter Schritt der Installation/des Updates.
+# Läuft als root, als allerletzter Schritt der Installation/des Updates.
 # Aufgaben:
 #  1. Falls preroot.sh eine Konfiguration gesichert hat (Update-Fall): wiederherstellen,
-#     damit die Einstellungen des Nutzers das Update ueberleben.
+#     damit die Einstellungen des Nutzers das Update überleben.
 #  2. Berechtigungen sicherstellen.
 #  3. Dienst (neu) starten, damit die aktuelle Konfiguration sofort aktiv ist.
 
@@ -19,7 +19,7 @@ PBIN=$LBPBIN/$PDIR
 PLOG=$LBPLOG/$PDIR
 BACKUPDIR=/tmp/modbus-proxy_configbackup
 
-echo "<INFO> postroot.sh gestartet fuer $PSHNAME Version $PVERSION"
+echo "<INFO> postroot.sh gestartet für $PSHNAME Version $PVERSION"
 
 if [ -f "$BACKUPDIR/modbus-proxy.yml" ]; then
 	echo "<INFO> Stelle gesicherte Konfiguration wieder her."
@@ -33,7 +33,7 @@ chmod 755 "$PBIN"/*.sh 2>/dev/null
 mkdir -p "$PLOG"
 chown loxberry:loxberry "$PLOG"
 
-echo "<INFO> Starte modbus-proxy-Dienst neu, damit die Konfiguration uebernommen wird."
+echo "<INFO> Starte modbus-proxy-Dienst neu, damit die Konfiguration übernommen wird."
 "$PBIN/modbus-proxy-ctl.sh" restart
 
 exit 0

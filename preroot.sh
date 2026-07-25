@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Laeuft als root, VOR dem Loeschen einer evtl. vorhandenen alten Installation.
+# Läuft als root, VOR dem Löschen einer evtl. vorhandenen alten Installation.
 # Aufgaben:
-#  1. Python-Paket modbus-proxy (mit YAML-Unterstuetzung) installieren/aktualisieren.
+#  1. Python-Paket modbus-proxy (mit YAML-Unterstützung) installieren/aktualisieren.
 #  2. Bei einem Update: bestehende Konfiguration sichern, bevor sie durch die
-#     Installationsroutine geloescht wird (siehe postroot.sh fuer die Wiederherstellung).
+#     Installationsroutine gelöscht wird (siehe postroot.sh für die Wiederherstellung).
 
 COMMAND=$0
 PTEMPDIR=$1
@@ -16,17 +16,17 @@ PTEMPPATH=$6
 PCONFIG=$LBPCONFIG/$PDIR
 BACKUPDIR=/tmp/modbus-proxy_configbackup
 
-echo "<INFO> preroot.sh gestartet fuer $PSHNAME Version $PVERSION"
+echo "<INFO> preroot.sh gestartet für $PSHNAME Version $PVERSION"
 
-# pip3 install kann je nach Netzwerk/Paketgroesse eine Weile dauern und gibt
+# pip3 install kann je nach Netzwerk/Paketgröße eine Weile dauern und gibt
 # selbst nichts aus - ohne Lebenszeichen wirkt das Installations-Log dann, als
-# waere es haengengeblieben. Deshalb waehrenddessen ein periodisches <INFO>.
+# wäre es hängengeblieben. Deshalb währenddessen ein periodisches <INFO>.
 run_with_heartbeat() {
 	"$@" &
 	local cmdpid=$!
 	while kill -0 "$cmdpid" 2>/dev/null; do
 		sleep 15
-		echo "<INFO> ...laeuft noch (PID $cmdpid)"
+		echo "<INFO> ...läuft noch (PID $cmdpid)"
 	done
 	wait "$cmdpid"
 }
@@ -34,7 +34,7 @@ run_with_heartbeat() {
 echo "<INFO> Installiere/aktualisiere Python-Paket modbus-proxy..."
 run_with_heartbeat pip3 install --upgrade --break-system-packages "modbus-proxy[yaml]" 2>/tmp/modbus-proxy_pipinstall.log
 if [ $? -ne 0 ]; then
-	# Manche Systeme kennen --break-system-packages nicht (aeltere pip-Version) - Fallback ohne dieses Flag.
+	# Manche Systeme kennen --break-system-packages nicht (ältere pip-Version) - Fallback ohne dieses Flag.
 	run_with_heartbeat pip3 install --upgrade "modbus-proxy[yaml]" 2>>/tmp/modbus-proxy_pipinstall.log
 fi
 if [ $? -ne 0 ]; then
@@ -45,7 +45,7 @@ else
 fi
 
 if [ -f "$PCONFIG/modbus-proxy.yml" ]; then
-	echo "<INFO> Bestehende Konfiguration gefunden - sichere sie fuer die Wiederherstellung nach dem Update."
+	echo "<INFO> Bestehende Konfiguration gefunden - sichere sie für die Wiederherstellung nach dem Update."
 	rm -rf "$BACKUPDIR"
 	mkdir -p "$BACKUPDIR"
 	cp -a "$PCONFIG/modbus-proxy.yml" "$BACKUPDIR/modbus-proxy.yml"

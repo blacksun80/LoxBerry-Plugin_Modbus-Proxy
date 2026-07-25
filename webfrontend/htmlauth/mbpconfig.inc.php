@@ -2,7 +2,7 @@
 // Lesen/Schreiben der modbus-proxy.yml.
 // Kein generischer YAML-Parser: die Datei folgt immer exakt dem Format, das
 // mbp_config_to_yaml() unten erzeugt - das macht Parsen und Schreiben robust
-// und ueberschaubar, ohne eine externe YAML-Bibliothek einzubinden.
+// und überschaubar, ohne eine externe YAML-Bibliothek einzubinden.
 
 define("MBP_LOGLEVELS", ["DEBUG", "INFO", "WARNING", "ERROR"]);
 
@@ -15,9 +15,9 @@ function mbp_default_config() {
 	];
 }
 
-// Modbus-proxy erwartet reine "host:port"-Adressen. Die Einschraenkung auf dieses
-// Format verhindert nebenbei, dass Sonderzeichen (Anfuehrungszeichen etc.) ueberhaupt
-// in die YAML-Datei gelangen koennen.
+// Modbus-proxy erwartet reine "host:port"-Adressen. Die Einschränkung auf dieses
+// Format verhindert nebenbei, dass Sonderzeichen (Anführungszeichen etc.) überhaupt
+// in die YAML-Datei gelangen können.
 function mbp_valid_hostport($s) {
 	return (bool)preg_match('/^[A-Za-z0-9.\-]+:[0-9]{1,5}$/', $s);
 }
@@ -31,7 +31,7 @@ function mbp_config_to_yaml($cfg, $logfile) {
 
 	$lines = [];
 	$lines[] = "# Von der LoxBerry Modbus-Proxy Plugin-GUI verwaltet.";
-	$lines[] = "# Manuelle Aenderungen werden beim naechsten Speichern in der GUI ueberschrieben.";
+	$lines[] = "# Manuelle Änderungen werden beim nächsten Speichern in der GUI überschrieben.";
 	$lines[] = "# modbus-proxy-plugin-loglevel: " . $loglevel;
 	$lines[] = "devices:";
 	foreach ($cfg["devices"] as $d) {

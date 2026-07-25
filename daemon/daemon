@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Wird von LoxBerry beim Systemstart als root ausgefuehrt (system/daemons/plugins/).
-# Startet den modbus-proxy-Dienst ueber das Steuerskript (laeuft dort als User loxberry).
+# Wird von LoxBerry beim Systemstart als root ausgeführt (system/daemons/plugins/).
+# Startet den modbus-proxy-Dienst über das Steuerskript (läuft dort als User loxberry).
 
 log="$LBPLOG/modbus-proxy/daemonstart.log"
 mkdir -p "$LBPLOG/modbus-proxy"
-echo "$(date '+%Y-%m-%d %H:%M:%S') Boot-Start ausgeloest" >>"$log"
+echo "$(date '+%Y-%m-%d %H:%M:%S') Boot-Start ausgelöst" >>"$log"
 
 "$LBPBIN/modbus-proxy/modbus-proxy-ctl.sh" start >>"$log" 2>&1
 

@@ -91,6 +91,7 @@ LBWeb::lbheader($L["TITLE.PAGETITLE"] . " V$version", "https://pypi.org/project/
 .mbp-port-up { background: #4caf50; }
 .mbp-port-down { background: #c0392b; }
 .mbp-hint { font-size: 0.85em; color: #777; margin: 0 0 8px 0; }
+.mbp-box { border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; border: 1px solid #ccc; }
 </style>
 
 <?php if ($message): ?>
@@ -156,9 +157,11 @@ LBWeb::lbheader($L["TITLE.PAGETITLE"] . " V$version", "https://pypi.org/project/
 				<input data-inline="true" data-mini="true" type="text" name="devices[<?php echo $i; ?>][bind]" value="<?php echo htmlspecialchars($d["bind"]); ?>" required>
 
 				<label><?php echo $L["CONFIG.TIMEOUT"]; ?></label>
+				<p class="mbp-hint"><?php echo $L["CONFIG.TIMEOUT_HINT"]; ?></p>
 				<input data-inline="true" data-mini="true" type="number" step="0.1" min="0" name="devices[<?php echo $i; ?>][timeout]" value="<?php echo htmlspecialchars($d["timeout"]); ?>">
 
 				<label><?php echo $L["CONFIG.CONNECTION_TIME"]; ?></label>
+				<p class="mbp-hint"><?php echo $L["CONFIG.CONNECTION_TIME_HINT"]; ?></p>
 				<input data-inline="true" data-mini="true" type="number" step="0.1" min="0" name="devices[<?php echo $i; ?>][connection_time]" value="<?php echo htmlspecialchars($d["connection_time"]); ?>">
 
 				<label><?php echo $L["CONFIG.UNIT_ID_REMAPPING"]; ?></label>
@@ -195,9 +198,11 @@ LBWeb::lbheader($L["TITLE.PAGETITLE"] . " V$version", "https://pypi.org/project/
 		<input data-inline="true" data-mini="true" type="text" name="devices[__IDX__][bind]" value="" required>
 
 		<label><?php echo $L["CONFIG.TIMEOUT"]; ?></label>
+		<p class="mbp-hint"><?php echo $L["CONFIG.TIMEOUT_HINT"]; ?></p>
 		<input data-inline="true" data-mini="true" type="number" step="0.1" min="0" name="devices[__IDX__][timeout]" value="10">
 
 		<label><?php echo $L["CONFIG.CONNECTION_TIME"]; ?></label>
+		<p class="mbp-hint"><?php echo $L["CONFIG.CONNECTION_TIME_HINT"]; ?></p>
 		<input data-inline="true" data-mini="true" type="number" step="0.1" min="0" name="devices[__IDX__][connection_time]" value="0">
 
 		<label><?php echo $L["CONFIG.UNIT_ID_REMAPPING"]; ?></label>
@@ -214,7 +219,8 @@ var mbpL = {
 	installedversion: <?php echo json_encode($L["STATUS.INSTALLED_VERSION"]); ?>,
 	notinstalled: <?php echo json_encode($L["STATUS.NOT_INSTALLED"]); ?>,
 	portopen: <?php echo json_encode($L["STATUS.PORT_OPEN"]); ?>,
-	portclosed: <?php echo json_encode($L["STATUS.PORT_CLOSED"]); ?>
+	portclosed: <?php echo json_encode($L["STATUS.PORT_CLOSED"]); ?>,
+	removeconfirm: <?php echo json_encode($L["CONFIG.REMOVE_DEVICE_CONFIRM"]); ?>
 };
 
 function mbpPollStatus() {
@@ -248,29 +254,24 @@ function mbpAddDevice() {
 	mbpNextIdx++;
 }
 function mbpRemoveDevice(el) {
+	if (!confirm(mbpL.removeconfirm)) {
+		return;
+	}
 	el.closest(".mbp-device").remove();
 }
 </script>
 
 <p class="wide"><?php echo $L["EXPORT.HEAD"]; ?></p>
-<a href="export.php" data-role="button" data-inline="true" data-mini="true"><?php echo $L["EXPORT.EXPORT_BTN"]; ?></a>
+<div class="mbp-box">
+	<a href="export.php" data-role="button" data-inline="true" data-mini="true"><?php echo $L["EXPORT.EXPORT_BTN"]; ?></a>
 
-<form action="index.php" method="post" enctype="multipart/form-data" style="margin-top:10px;">
-	<input type="hidden" name="action" value="import">
-	<label><?php echo $L["EXPORT.IMPORT_LABEL"]; ?></label>
-	<input type="file" name="importfile" accept=".yml,.yaml">
-	<button type="submit" data-role="button" data-inline="true" data-mini="true"><?php echo $L["EXPORT.IMPORT_BTN"]; ?></button>
-</form>
-
-<p class="wide"><?php echo $L["ABOUT.HEAD"]; ?></p>
-<p><?php echo $L["ABOUT.DESC"]; ?></p>
-<p><?php echo $L["ABOUT.PLUGINVERSION"]; ?>: <?php echo htmlspecialchars($version); ?></p>
-<p style="font-size:0.9em;color:#777;"><?php echo $L["ABOUT.CREDITS"]; ?></p>
-<p>
-	<a href="https://github.com/blacksun80/LoxBerry-Plugin_Modbus-Proxy" target="_blank"><?php echo $L["ABOUT.LINK_GITHUB"]; ?></a>
-	&nbsp;|&nbsp;
-	<a href="https://pypi.org/project/modbus-proxy/" target="_blank"><?php echo $L["ABOUT.LINK_PYPI"]; ?></a>
-</p>
+	<form action="index.php" method="post" enctype="multipart/form-data" style="margin-top:10px;">
+		<input type="hidden" name="action" value="import">
+		<label><?php echo $L["EXPORT.IMPORT_LABEL"]; ?></label>
+		<input type="file" name="importfile" accept=".yml,.yaml">
+		<button type="submit" data-role="button" data-inline="true" data-mini="true"><?php echo $L["EXPORT.IMPORT_BTN"]; ?></button>
+	</form>
+</div>
 
 <?php
 LBWeb::lbfooter();
