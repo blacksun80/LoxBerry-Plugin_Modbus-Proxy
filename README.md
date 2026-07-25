@@ -37,13 +37,6 @@ Der laufende Dienst wird gestoppt. Das per pip installierte Python-Paket `modbus
 bleibt bewusst installiert (falls es anderweitig genutzt wird) und kann bei Bedarf manuell per
 `pip3 uninstall modbus-proxy` entfernt werden.
 
-## Danksagung
-
-Dieses Plugin basiert strukturell auf dem offiziellen
-[`LoxBerry-Plugin-SamplePlugin-V4`](https://github.com/mschlenstedt/LoxBerry-Plugin-SamplePlugin-V4)
-und nutzt das Python-Paket [`modbus-proxy`](https://pypi.org/project/modbus-proxy/) (GPLv3) von
-Tiago Coutinho. Herzlichen Dank an beide Autoren fuer die Vorarbeit!
-
 ## Lizenz
 
 Siehe [LICENSE](LICENSE). Das eingebundene `modbus-proxy`-Paket steht unter GPLv3 und wird nicht
