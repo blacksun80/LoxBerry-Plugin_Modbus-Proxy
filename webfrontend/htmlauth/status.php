@@ -11,10 +11,19 @@ $status = mbp_daemon_status($ctlscript);
 $devices = [];
 foreach ($cfg["devices"] as $d) {
 	$port = mbp_bind_port($d["bind"]);
+	$tr = mbp_device_traffic($d);
 	$devices[] = [
 		"bind" => $d["bind"],
 		"url" => $d["url"],
 		"reachable" => $status["running"] && mbp_port_reachable($port),
+		"clients" => $tr["client"]["conns"],
+		"rx" => $tr["client"]["rx"],
+		"tx" => $tr["client"]["tx"],
+		"rx_human" => mbp_format_bytes($tr["client"]["rx"]),
+		"tx_human" => mbp_format_bytes($tr["client"]["tx"]),
+		"rx_active" => mbp_is_active($tr["client"]["last_rx_ms"]),
+		"tx_active" => mbp_is_active($tr["client"]["last_tx_ms"]),
+		"device_connected" => $tr["device"]["conns"] > 0,
 	];
 }
 

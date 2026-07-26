@@ -214,6 +214,67 @@ function mbp_daemon_status($ctlscript) {
 	return ["running" => $running, "pid" => $pid];
 }
 
+// Liest TCP-Socket-Statistiken zu einem ss-Filterausdruck: Anzahl der Verbindungen,
+// übertragene Bytes und die Zeit seit dem letzten Datenpaket (in Millisekunden).
+function mbp_socket_stats($filter) {
+	$stats = ["conns" => 0, "rx" => 0, "tx" => 0, "last_rx_ms" => null, "last_tx_ms" => null];
+	$out = [];
+	exec("ss -tin state established " . escapeshellarg($filter) . " 2>/dev/null", $out);
+	foreach ($out as $line) {
+		// Verbindungszeile: "Recv-Q Send-Q <lokal>:<port> <peer>:<port>"
+		if (preg_match('/^\s*\d+\s+\d+\s+\S+:\d+\s+\S+:\d+/', $line)) {
+			$stats["conns"]++;
+			continue;
+		}
+		if (preg_match('/bytes_received:(\d+)/', $line, $m)) {
+			$stats["rx"] += (int)$m[1];
+		}
+		if (preg_match('/bytes_sent:(\d+)/', $line, $m)) {
+			$stats["tx"] += (int)$m[1];
+		} elseif (preg_match('/bytes_acked:(\d+)/', $line, $m)) {
+			$stats["tx"] += (int)$m[1];
+		}
+		if (preg_match('/lastrcv:(\d+)/', $line, $m)) {
+			$stats["last_rx_ms"] = is_null($stats["last_rx_ms"]) ? (int)$m[1] : min($stats["last_rx_ms"], (int)$m[1]);
+		}
+		if (preg_match('/lastsnd:(\d+)/', $line, $m)) {
+			$stats["last_tx_ms"] = is_null($stats["last_tx_ms"]) ? (int)$m[1] : min($stats["last_tx_ms"], (int)$m[1]);
+		}
+	}
+	return $stats;
+}
+
+// Datenverkehr eines konfigurierten Geräts: clientseitig (Clients -> Proxy) und
+// geräteseitig (Proxy -> echtes Modbus-Gerät).
+function mbp_device_traffic($device) {
+	$port = mbp_bind_port($device["bind"]);
+	$client = $port === null
+		? ["conns" => 0, "rx" => 0, "tx" => 0, "last_rx_ms" => null, "last_tx_ms" => null]
+		: mbp_socket_stats("( sport = :$port )");
+	$dev = mbp_valid_hostport($device["url"])
+		? mbp_socket_stats("( dst " . $device["url"] . " )")
+		: ["conns" => 0, "rx" => 0, "tx" => 0, "last_rx_ms" => null, "last_tx_ms" => null];
+	return ["client" => $client, "device" => $dev];
+}
+
+// Gilt als aktiv, wenn innerhalb dieser Zeitspanne Daten geflossen sind.
+define("MBP_ACTIVITY_MS", 10000);
+
+function mbp_is_active($last_ms) {
+	return $last_ms !== null && $last_ms < MBP_ACTIVITY_MS;
+}
+
+function mbp_format_bytes($bytes) {
+	$bytes = (int)$bytes;
+	if ($bytes < 1024) {
+		return $bytes . " B";
+	}
+	if ($bytes < 1024 * 1024) {
+		return number_format($bytes / 1024, 1, ",", ".") . " kB";
+	}
+	return number_format($bytes / (1024 * 1024), 1, ",", ".") . " MB";
+}
+
 function mbp_installed_version() {
 	$out = [];
 	exec("pip3 show modbus-proxy 2>/dev/null", $out);
