@@ -15,8 +15,10 @@ Proxy, der die Anfragen seriell an das eigentliche Gerät weiterreicht.
   Unit-ID-Umleitung.
 - **Speichern** schreibt die Konfiguration und startet den Dienst automatisch neu, damit die
   Änderungen sofort aktiv sind.
-- **Status-Anzeige** (läuft/gestoppt, PID, installierte modbus-proxy-Version, pro Gerät ob der
-  Listen-Port erreichbar ist), aktualisiert sich automatisch alle 5 Sekunden.
+- **Status-Anzeige** (läuft/gestoppt, PID, installierte modbus-proxy-Version), aktualisiert sich
+  automatisch alle 5 Sekunden. Pro Gerät wird angezeigt, ob der Listen-Port erreichbar ist, wie
+  viele Clients verbunden sind, wie viele Daten empfangen/gesendet wurden (mit Anzeige, ob gerade
+  Daten fließen) und ob der Proxy aktuell mit dem Modbus-Gerät verbunden ist.
 - **Start/Stopp/Neustart** des Dienstes direkt aus der GUI.
 - **Export/Import** der Konfiguration als YAML-Datei (Backup oder Übertragung auf einen anderen
   LoxBerry).
