@@ -39,6 +39,11 @@ Der laufende Dienst wird gestoppt. Das per pip installierte Python-Paket `modbus
 bleibt bewusst installiert (falls es anderweitig genutzt wird) und kann bei Bedarf manuell per
 `pip3 uninstall modbus-proxy` entfernt werden.
 
+## Dokumentation
+
+Ausführliche Dokumentation (Konfigurationsoptionen, Einrichtung in der Loxone Config Software)
+im [LoxBerry-Wiki](https://wiki.loxberry.de/plugins/modbus-proxy/start).
+
 ## Lizenz
 
 Siehe [LICENSE](LICENSE). Das eingebundene `modbus-proxy`-Paket steht unter GPLv3 und wird nicht

@@ -6,6 +6,82 @@
 
 define("MBP_LOGLEVELS", ["DEBUG", "INFO", "WARNING", "ERROR"]);
 
+// Tab-Leiste im Kopfbereich. $aktiv ist der Dateiname der gerade offenen Seite.
+function mbp_navbar($aktiv, $L) {
+	global $navbar;
+	$seiten = [
+		1 => ["index.php", $L["NAVBAR.MAIN"]],
+		2 => ["log.php", $L["NAVBAR.LOG"]],
+		3 => ["backup.php", $L["NAVBAR.BACKUP"]],
+	];
+	foreach ($seiten as $nr => $seite) {
+		$navbar[$nr]["Name"] = $seite[1];
+		$navbar[$nr]["URL"] = $seite[0];
+		if ($seite[0] === $aktiv) {
+			$navbar[$nr]["active"] = True;
+		}
+	}
+}
+
+// Gemeinsames Stylesheet aller Plugin-Seiten.
+function mbp_styles() {
+	?>
+<style>
+.mbp-box { border: 1px solid #ccc; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+.mbp-status-ok { background: #eefaee; border-color: #7bc77b; }
+.mbp-status-bad { background: #fdeeee; border-color: #d98a8a; }
+.mbp-msg-ok { background: #dff2df; border: 1px solid #7bc77b; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+.mbp-msg-error { background: #f7dede; border: 1px solid #d98a8a; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+
+.mbp-sechead { position: relative; }
+.mbp-sechead-action { position: absolute; right: 0; bottom: 8px; }
+
+.mbp-status-head { font-size: 1.05em; }
+.mbp-status-sub { color: #666; font-size: 0.9em; margin-top: 2px; }
+
+.mbp-conn { background: rgba(255,255,255,0.75); border: 1px solid #d5d5d5; border-radius: 6px; padding: 8px 10px; margin: 10px 0; }
+.mbp-conn-head { font-size: 0.95em; }
+.mbp-conn-route { font-family: monospace; font-size: 1em; }
+.mbp-conn-meta { margin-top: 6px; font-size: 0.85em; color: #555; }
+.mbp-conn-meta > span { display: inline-block; margin-right: 14px; white-space: nowrap; }
+
+.mbp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.mbp-dot-up { background: #4caf50; }
+.mbp-dot-down { background: #c0392b; }
+.mbp-dot-idle { background: #bbb; }
+.mbp-dot-active { background: #2196f3; box-shadow: 0 0 5px #2196f3; }
+
+.mbp-btnrow { margin-top: 12px; }
+
+.mbp-device { border: 1px solid #ddd; background: #fafafa; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+.mbp-device-head { overflow: hidden; margin-bottom: 6px; }
+.mbp-device-title { float: left; font-weight: bold; line-height: 2.4; }
+.mbp-device-remove { float: right; }
+.mbp-device-remove .ui-btn { margin: 0; }
+.mbp-hint { font-size: 0.85em; color: #777; margin: 0 0 6px 0; }
+
+.mbp-field { margin-bottom: 4px; }
+.mbp-field label { display: block; margin: 0 0 5px 0; }
+.mbp-field .ui-select { margin: 0; width: 190px; }
+
+.mbp-logview { background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 0.8em;
+	padding: 10px; border-radius: 6px; max-height: 460px; overflow: auto; white-space: pre-wrap;
+	word-break: break-all; margin: 0; }
+.mbp-loginfo { color: #666; font-size: 0.85em; margin: 8px 0 0 0; }
+
+.mbp-modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+	background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
+.mbp-modal-overlay.mbp-modal-open { display: flex; }
+.mbp-modal { background: #fff; border-radius: 10px; padding: 20px 22px; max-width: 90%; width: 420px;
+	box-shadow: 0 6px 24px rgba(0,0,0,0.3); }
+.mbp-modal h3 { margin: 0 0 12px 0; }
+.mbp-modal p { margin: 0 0 18px 0; }
+.mbp-modal-btns { text-align: right; }
+.mbp-modal-btns .ui-btn { margin-left: 8px; }
+</style>
+	<?php
+}
+
 function mbp_default_config() {
 	return [
 		"loglevel" => "INFO",
@@ -143,9 +219,10 @@ function mbp_read_config($path) {
 	return $result["config"];
 }
 
-// Baut das Config-Array aus den POST-Daten des Formulars.
-function mbp_config_from_post($post) {
-	$cfg = ["loglevel" => "INFO", "devices" => []];
+// Baut das Config-Array aus den POST-Daten des Formulars. Der Log-Level wird auf
+// einer eigenen Seite gepflegt - fehlt er im POST, bleibt der bisherige erhalten.
+function mbp_config_from_post($post, $loglevel_fallback = "INFO") {
+	$cfg = ["loglevel" => in_array($loglevel_fallback, MBP_LOGLEVELS) ? $loglevel_fallback : "INFO", "devices" => []];
 	if (isset($post["loglevel"]) && in_array($post["loglevel"], MBP_LOGLEVELS)) {
 		$cfg["loglevel"] = $post["loglevel"];
 	}
