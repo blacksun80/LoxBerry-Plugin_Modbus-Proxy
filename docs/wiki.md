@@ -6,7 +6,10 @@ eingefügt werden kann. Aufbau nach der offiziellen LoxBerry-Wiki-Vorlage (Beisp
 Der Seitenkopf "LoxBerry Wiki - BEYOND THE LIMITS" ist Seiten-Chrome der Wiki-Vorlage selbst
 und gehört NICHT in den Seiteninhalt - der beginnt direkt mit der Plugin-Daten-Tabelle.
 
-Syntax-Referenz: Claude_Gedächtnis\LoxBerry\DokuWiki-Syntax.md
+WICHTIG: Jeder Absatz und jeder Listenpunkt steht hier bewusst auf EINER durchgehenden Zeile
+(kein manueller Zeilenumbruch mitten im Text) - DokuWiki reflowt umgebrochene Zeilen innerhalb
+von Listenpunkten/Absätzen NICHT wie Markdown, der Markup-Editor zeigt sonst falsche
+Zeilenumbrüche in der Vorschau. Siehe Claude_Gedächtnis\LoxBerry\DokuWiki-Syntax.md.
 -->
 
 ^ Plugin-Daten ||
@@ -18,31 +21,24 @@ Syntax-Referenz: Claude_Gedächtnis\LoxBerry\DokuWiki-Syntax.md
 ^ Release Download | [[https://github.com/blacksun80/LoxBerry-Plugin_Modbus-Proxy/archive/refs/tags/Modbus-Proxy-V1.0.0.zip|Modbus-Proxy-V1.0.0.zip]] |
 ^ Beschreibung | Stellt eine grafische Oberfläche für den Python-Dienst modbus-proxy bereit: mehrere Modbus-TCP-Clients (z.B. mehrere Loxone Miniserver) können sich einen einzelnen Modbus-TCP-Anschluss teilen. |
 ^ Sprachen | DE, EN |
-^ Diskussion | TODO: Link zum LoxForum-Beitrag einfügen, sobald veröffentlicht |
+^ Diskussion | [[https://www.loxforum.com/forum/projektforen/loxberry/plugins/488908-modbus-proxy-plugin-zur-einfachen-gemeinsamen-nutzung-eines-modbus-tcp-ger%C3%A4ts|LoxForum-Beitrag]] |
 
 ====== Modbus-Proxy ======
 
 ===== Funktion des Plugins =====
 
-Viele Modbus-TCP-Geräte (SPS, Wärmepumpen-Regler, Wechselrichter, Zähler, ...) erlauben nur eine
-sehr kleine Anzahl gleichzeitiger Verbindungen. Das Modbus-Proxy-Plugin installiert und verwaltet
-den Python-Dienst [[https://pypi.org/project/modbus-proxy/|modbus-proxy]] von Tiago Coutinho,
-der sich als Brücke dazwischen setzt: mehrere Clients verbinden sich mit dem Proxy auf dem
-LoxBerry, der die Anfragen seriell an das eigentliche Gerät weiterreicht.
+Viele Modbus-TCP-Geräte (SPS, Wärmepumpen-Regler, Wechselrichter, Zähler, ...) erlauben nur eine sehr kleine Anzahl gleichzeitiger Verbindungen. Das Modbus-Proxy-Plugin installiert und verwaltet den Python-Dienst [[https://pypi.org/project/modbus-proxy/|modbus-proxy]] von Tiago Coutinho, der sich als Brücke dazwischen setzt: mehrere Clients verbinden sich mit dem Proxy auf dem LoxBerry, der die Anfragen seriell an das eigentliche Gerät weiterreicht.
 
 **Funktionen:**
 
-  * Konfiguration beliebig vieler Modbus-Geräte per grafischer Oberfläche statt Handbearbeitung
-    einer YAML-Datei
+  * Konfiguration beliebig vieler Modbus-Geräte per grafischer Oberfläche statt Handbearbeitung einer YAML-Datei
   * Speichern schreibt die Konfiguration und startet den Dienst automatisch neu
   * Status-Anzeige: läuft/gestoppt, Prozess-ID, installierte modbus-proxy-Version
-  * Je Gerät: erreichbarer Listen-Port, Anzahl verbundener Clients, empfangene/gesendete
-    Datenmenge mit Aktivitätsanzeige, ob der Proxy mit dem echten Gerät verbunden ist
+  * Je Gerät: erreichbarer Listen-Port, Anzahl verbundener Clients, empfangene/gesendete Datenmenge mit Aktivitätsanzeige, ob der Proxy mit dem echten Gerät verbunden ist
   * Start/Stopp/Neustart des Dienstes direkt aus der GUI
   * Log-Datei einsehbar direkt in der GUI (letzte 120 Zeilen) sowie über den LoxBerry-Log-Viewer
   * Log-Level einstellbar (DEBUG/INFO/WARNING/ERROR)
-  * Export/Import der Konfiguration als YAML-Datei (Backup oder Übertragung auf einen anderen
-    LoxBerry)
+  * Export/Import der Konfiguration als YAML-Datei (Backup oder Übertragung auf einen anderen LoxBerry)
   * Update-fest: die Konfiguration bleibt bei einem Plugin-Update erhalten
   * Mehrsprachig (Deutsch/Englisch)
 
@@ -58,25 +54,21 @@ LoxBerry, der die Anfragen seriell an das eigentliche Gerät weiterreicht.
 <code>
 https://github.com/blacksun80/LoxBerry-Plugin_Modbus-Proxy/archive/refs/tags/Modbus-Proxy-V1.0.0.zip
 </code>
-  - Installation starten und abwarten. Das Plugin installiert automatisch das Python-Paket
-    ''modbus-proxy'' per ''pip3''.
+  - Installation starten und abwarten. Das Plugin installiert automatisch das Python-Paket ''modbus-proxy'' per ''pip3''.
 
 **Voraussetzungen:**
 
   * LoxBerry 3.0.0 oder neuer
   * Internetzugang beim Installieren/Updaten (für die pip-Installation von modbus-proxy)
-  * Kein externes Konto/keine Cloud nötig - die Verbindung zum Modbus-Gerät läuft ausschließlich
-    im lokalen Netzwerk
+  * Kein externes Konto/keine Cloud nötig - die Verbindung zum Modbus-Gerät läuft ausschließlich im lokalen Netzwerk
 
 ===== Konfigurationsoptionen =====
 
 ==== Plugin-Seite öffnen ====
 
-Die Plugin-Seite ist unter **LoxBerry → Plugins → Modbus-Proxy** erreichbar. Sie enthält drei
-Reiter:
+Die Plugin-Seite ist unter **LoxBerry → Plugins → Modbus-Proxy** erreichbar. Sie enthält drei Reiter:
 
-  * **Status & Konfiguration** — Dienststatus, Verbindungsübersicht je Gerät, Geräte anlegen/
-    bearbeiten/entfernen
+  * **Status & Konfiguration** — Dienststatus, Verbindungsübersicht je Gerät, Geräte anlegen/bearbeiten/entfernen
   * **Log** — Log-Level einstellen, aktuelle Logdatei einsehen
   * **Backup/Restore** — Konfiguration exportieren/importieren
 
@@ -103,31 +95,24 @@ Je konfiguriertem Gerät:
 
 ==== Log ====
 
-Legt fest, wie ausführlich der Dienst protokolliert (DEBUG/INFO/WARNING/ERROR) und zeigt die
-letzten 120 Zeilen der Logdatei direkt in der GUI. Über den Button lässt sich das vollständige
-Log im LoxBerry-eigenen Log-Viewer öffnen.
+Legt fest, wie ausführlich der Dienst protokolliert (DEBUG/INFO/WARNING/ERROR) und zeigt die letzten 120 Zeilen der Logdatei direkt in der GUI. Über den Button lässt sich das vollständige Log im LoxBerry-eigenen Log-Viewer öffnen.
 
 ==== Backup/Restore ====
 
-Lädt die aktuelle Konfiguration als YAML-Datei herunter bzw. spielt eine zuvor exportierte Datei
-wieder ein (die bisherige Konfiguration wird dabei als ''modbus-proxy.yml.bak'' gesichert).
+Lädt die aktuelle Konfiguration als YAML-Datei herunter bzw. spielt eine zuvor exportierte Datei wieder ein (die bisherige Konfiguration wird dabei als ''modbus-proxy.yml.bak'' gesichert).
 
 ===== Einrichtung in der Loxone Config Software =====
 
-Ein per Modbus-Proxy bereitgestelltes Gerät wird in Loxone genauso eingebunden wie das Gerät
-selbst - nur mit anderer Adresse:
+Ein per Modbus-Proxy bereitgestelltes Gerät wird in Loxone genauso eingebunden wie das Gerät selbst - nur mit anderer Adresse:
 
   - In Loxone Config einen **Modbus-TCP-Server** anlegen.
   - Als Adresse die **IP-Adresse des LoxBerry** eintragen.
-  - Als Port die in der Plugin-GUI konfigurierte **Listen-Adresse** (z.B. ''9010'') eintragen -
-    nicht den Port des echten Geräts.
-  - Register/Datenpunkte wie gewohnt anlegen; der Proxy reicht alle Anfragen transparent an das
-    echte Gerät weiter.
+  - Als Port die in der Plugin-GUI konfigurierte **Listen-Adresse** (z.B. ''9010'') eintragen - nicht den Port des echten Geräts.
+  - Register/Datenpunkte wie gewohnt anlegen; der Proxy reicht alle Anfragen transparent an das echte Gerät weiter.
 
-Mehrere Miniserver bzw. mehrere Clients können sich so denselben Modbus-TCP-Anschluss teilen,
-ohne dass sich die Verbindungen gegenseitig stören.
+Mehrere Miniserver bzw. mehrere Clients können sich so denselben Modbus-TCP-Anschluss teilen, ohne dass sich die Verbindungen gegenseitig stören.
 
 ===== Fragen stellen und Fehler melden =====
 
   * **GitHub Issues:** [[https://github.com/blacksun80/LoxBerry-Plugin_Modbus-Proxy/issues]]
-  * **LoxBerry Forum:** TODO: Link zum LoxForum-Beitrag einfügen, sobald veröffentlicht
+  * **LoxBerry Forum:** [[https://www.loxforum.com/forum/projektforen/loxberry/plugins/488908-modbus-proxy-plugin-zur-einfachen-gemeinsamen-nutzung-eines-modbus-tcp-ger%C3%A4ts]]

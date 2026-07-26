@@ -42,7 +42,8 @@ bleibt bewusst installiert (falls es anderweitig genutzt wird) und kann bei Beda
 ## Dokumentation
 
 Ausführliche Dokumentation (Konfigurationsoptionen, Einrichtung in der Loxone Config Software)
-im [LoxBerry-Wiki](https://wiki.loxberry.de/plugins/modbus-proxy/start).
+im [LoxBerry-Wiki](https://wiki.loxberry.de/plugins/modbus-proxy/start). Fragen/Diskussion im
+[LoxForum](https://www.loxforum.com/forum/projektforen/loxberry/plugins/488908-modbus-proxy-plugin-zur-einfachen-gemeinsamen-nutzung-eines-modbus-tcp-ger%C3%A4ts).
 
 ## Lizenz
 
