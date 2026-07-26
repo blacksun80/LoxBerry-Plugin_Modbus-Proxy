@@ -20,22 +20,31 @@ echo "<INFO> preroot.sh gestartet für $PSHNAME Version $PVERSION"
 
 # pip3 install kann je nach Netzwerk/Paketgröße eine Weile dauern und gibt
 # selbst nichts aus - ohne Lebenszeichen wirkt das Installations-Log dann, als
-# wäre es hängengeblieben. Deshalb währenddessen ein periodisches <INFO>.
+# wäre es hängengeblieben. Deshalb währenddessen ein periodisches <INFO>, das
+# sagt, worauf gewartet wird und wie lange schon.
+# Aufruf: run_with_heartbeat "<Tätigkeit>" <Befehl> [Argumente...]
 run_with_heartbeat() {
+	local taetigkeit="$1"
+	shift
 	"$@" &
 	local cmdpid=$!
+	local sekunden=0
 	while kill -0 "$cmdpid" 2>/dev/null; do
 		sleep 15
-		echo "<INFO> ...läuft noch (PID $cmdpid)"
+		sekunden=$((sekunden + 15))
+		echo "<INFO> $taetigkeit - läuft seit ${sekunden}s. Das ist normal und kein Fehler; bitte das Fenster nicht schließen."
 	done
 	wait "$cmdpid"
 }
 
-echo "<INFO> Installiere/aktualisiere Python-Paket modbus-proxy..."
-run_with_heartbeat pip3 install --upgrade --break-system-packages "modbus-proxy[yaml]" 2>/tmp/modbus-proxy_pipinstall.log
+echo "<INFO> Installiere/aktualisiere das Python-Paket modbus-proxy. Es wird aus dem Internet von PyPI geladen - je nach Verbindung kann das einige Minuten dauern."
+run_with_heartbeat "Herunterladen und Installieren von modbus-proxy" \
+	pip3 install --upgrade --break-system-packages "modbus-proxy[yaml]" 2>/tmp/modbus-proxy_pipinstall.log
 if [ $? -ne 0 ]; then
 	# Manche Systeme kennen --break-system-packages nicht (ältere pip-Version) - Fallback ohne dieses Flag.
-	run_with_heartbeat pip3 install --upgrade "modbus-proxy[yaml]" 2>>/tmp/modbus-proxy_pipinstall.log
+	echo "<INFO> Erneuter Versuch ohne die Option --break-system-packages (ältere pip-Version)."
+	run_with_heartbeat "Herunterladen und Installieren von modbus-proxy" \
+		pip3 install --upgrade "modbus-proxy[yaml]" 2>>/tmp/modbus-proxy_pipinstall.log
 fi
 if [ $? -ne 0 ]; then
 	echo "<WARNING> Installation von modbus-proxy per pip3 ist fehlgeschlagen. Details: /tmp/modbus-proxy_pipinstall.log"

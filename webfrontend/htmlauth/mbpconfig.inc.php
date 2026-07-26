@@ -117,9 +117,15 @@ define("MBP_BIND_HOST", "0");
 // Datei etwas anderes, war die Adresse auf eine einzelne Schnittstelle eingeschränkt.
 define("MBP_BIND_HOST_ANY", ["0", "0.0.0.0", "", "::"]);
 
-// Muster für einen Hostnamen bzw. eine IPv4-Adresse. Wird auch als HTML-pattern an das
-// Eingabefeld gegeben, damit Browser und Server dieselbe Regel prüfen.
-define("MBP_HOST_PATTERN", '[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)*');
+// Muster für die Ziel-Adresse. Wird auch als HTML-pattern an das Eingabefeld gegeben,
+// damit Browser und Server dieselbe Regel prüfen. Zwei Alternativen:
+//   1. eine vollständige IPv4-Adresse mit Oktetten von 0 bis 255
+//   2. ein Hostname, dessen erster Namensteil mindestens einen Buchstaben enthält
+// Der Buchstabe in Teil 2 ist entscheidend: sonst wäre "192.168.178.195a" ein formal
+// gültiger Hostname und würde durchrutschen, obwohl es ein vertippter IP-Adresse ist.
+define("MBP_IPV4_PATTERN", '((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])');
+define("MBP_HOSTNAME_PATTERN", '[A-Za-z0-9\-]*[A-Za-z][A-Za-z0-9\-]*(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)*');
+define("MBP_HOST_PATTERN", "(" . MBP_IPV4_PATTERN . "|" . MBP_HOSTNAME_PATTERN . ")");
 
 // Muster für die Unit-ID-Umleitung: "1:0" oder "1:0, 2:5". Leer ist ebenfalls zulässig,
 // ein HTML-pattern greift bei leeren Feldern nicht.
@@ -160,7 +166,15 @@ function mbp_default_device() {
 // Hostname oder IPv4-Adresse. Die Einschränkung auf dieses Format verhindert nebenbei,
 // dass Sonderzeichen (Anführungszeichen etc.) in die YAML-Datei gelangen können.
 function mbp_valid_host($s) {
-	return strlen($s) <= 253 && (bool)preg_match('/^' . MBP_HOST_PATTERN . '$/', $s);
+	if (strlen($s) < 1 || strlen($s) > 253) {
+		return false;
+	}
+	// Sieht die Eingabe nach einer IP-Adresse aus (beginnt mit einer reinen Zahl und
+	// enthält einen Punkt), muss es auch eine gültige sein - sonst ist es ein Vertipper.
+	if (preg_match('/^[0-9]+\./', $s)) {
+		return filter_var($s, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+	}
+	return (bool)preg_match('/^' . MBP_HOSTNAME_PATTERN . '$/', $s);
 }
 
 function mbp_valid_port($p) {
