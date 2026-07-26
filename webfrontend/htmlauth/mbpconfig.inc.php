@@ -1,8 +1,7 @@
 <?php
-// Lesen/Schreiben der modbus-proxy.yml.
-// Kein generischer YAML-Parser: die Datei folgt immer exakt dem Format, das
-// mbp_config_to_yaml() unten erzeugt - das macht Parsen und Schreiben robust
-// und überschaubar, ohne eine externe YAML-Bibliothek einzubinden.
+// Lesen/Schreiben der modbus-proxy.yml sowie gemeinsame Helfer aller Plugin-Seiten.
+// Der Parser erwartet genau das Format, das mbp_config_to_yaml() unten erzeugt, und
+// ist kein allgemeiner YAML-Parser.
 
 define("MBP_LOGLEVELS", ["DEBUG", "INFO", "WARNING", "ERROR"]);
 
@@ -52,8 +51,8 @@ function mbp_styles() {
 .mbp-dot-active { background: #2196f3; box-shadow: 0 0 5px #2196f3; }
 
 .mbp-btnrow { margin-top: 12px; }
-/* jQuery Mobile gibt Buttons einen eigenen Aussenabstand - hier weg, damit sie
-   bündig unter dem darüberliegenden Feld beginnen. */
+/* Hebt den Aussenabstand auf, den jQuery Mobile Buttons gibt, damit sie bündig
+   unter dem darüberliegenden Feld beginnen. */
 .mbp-btnrow .ui-btn { margin-left: 0; }
 .mbp-autoinfo { font-size: 0.8em; color: #999; margin-left: 10px; }
 
@@ -72,8 +71,7 @@ function mbp_styles() {
 .mbp-addr .ui-input-text { margin: 0; }
 .mbp-subhint { display: block; font-size: 0.78em; color: #999; margin: 3px 0 0 2px; }
 
-/* Beispielwerte deutlich blasser als echte Eingaben, damit sie nicht mit einem
-   bereits eingetragenen Wert verwechselt werden. */
+/* Beispielwerte deutlich blasser als echte Eingaben. */
 .ui-input-text input::placeholder,
 .mbp-device input::placeholder { color: #c4c4c4; font-style: italic; opacity: 1; }
 .ui-input-text input::-webkit-input-placeholder,
@@ -108,21 +106,16 @@ function mbp_styles() {
 define("MBP_DEFAULT_LISTEN_PORT", 9010);
 define("MBP_DEFAULT_DEVICE_PORT", 502);
 
-// Host-Teil der listen-Adresse, den das Plugin schreibt: der Proxy lauscht immer auf
-// allen Netzwerkschnittstellen. modbus-proxy ersetzt einen leeren Host intern durch "0",
-// beides bedeutet dasselbe.
+// Host-Teil der listen-Adresse, den das Plugin schreibt: "0" steht für alle
+// Netzwerkschnittstellen.
 define("MBP_BIND_HOST", "0");
 
-// Host-Teile, die "alle Netzwerkschnittstellen" bedeuten. Steht in einer eingelesenen
-// Datei etwas anderes, war die Adresse auf eine einzelne Schnittstelle eingeschränkt.
+// Host-Teile, die "alle Netzwerkschnittstellen" bedeuten.
 define("MBP_BIND_HOST_ANY", ["0", "0.0.0.0", "", "::"]);
 
-// Muster für die Ziel-Adresse. Wird auch als HTML-pattern an das Eingabefeld gegeben,
-// damit Browser und Server dieselbe Regel prüfen. Zwei Alternativen:
-//   1. eine vollständige IPv4-Adresse mit Oktetten von 0 bis 255
-//   2. ein Hostname, dessen erster Namensteil mindestens einen Buchstaben enthält
-// Der Buchstabe in Teil 2 ist entscheidend: sonst wäre "192.168.178.195a" ein formal
-// gültiger Hostname und würde durchrutschen, obwohl es ein vertippter IP-Adresse ist.
+// Muster für die Ziel-Adresse, auch als HTML-pattern am Eingabefeld. Erlaubt sind
+// entweder eine vollständige IPv4-Adresse (Oktette 0 bis 255) oder ein Hostname,
+// dessen erster Namensteil mindestens einen Buchstaben enthält.
 define("MBP_IPV4_PATTERN", '((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])');
 define("MBP_HOSTNAME_PATTERN", '[A-Za-z0-9\-]*[A-Za-z][A-Za-z0-9\-]*(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)*');
 define("MBP_HOST_PATTERN", "(" . MBP_IPV4_PATTERN . "|" . MBP_HOSTNAME_PATTERN . ")");
@@ -131,8 +124,7 @@ define("MBP_HOST_PATTERN", "(" . MBP_IPV4_PATTERN . "|" . MBP_HOSTNAME_PATTERN .
 // ein HTML-pattern greift bei leeren Feldern nicht.
 define("MBP_REMAP_PATTERN", '\s*\d{1,3}\s*:\s*\d{1,3}\s*(,\s*\d{1,3}\s*:\s*\d{1,3}\s*)*');
 
-// Obergrenzen der Zahlenfelder. Sie begrenzen nur die Eingabe in der GUI - modbus-proxy
-// selbst kennt keine solchen Grenzen.
+// Obergrenzen der Zahlenfelder in der GUI.
 define("MBP_MAX_TIMEOUT", 3600);
 define("MBP_MAX_CONNECTION_TIME", 600);
 
@@ -163,14 +155,14 @@ function mbp_default_device() {
 	];
 }
 
-// Hostname oder IPv4-Adresse. Die Einschränkung auf dieses Format verhindert nebenbei,
-// dass Sonderzeichen (Anführungszeichen etc.) in die YAML-Datei gelangen können.
+// Prüft eine Ziel-Adresse: gültige IPv4-Adresse oder gültiger Hostname. Lässt keine
+// Sonderzeichen durch, die in der YAML-Datei zu Problemen führen würden.
 function mbp_valid_host($s) {
 	if (strlen($s) < 1 || strlen($s) > 253) {
 		return false;
 	}
-	// Sieht die Eingabe nach einer IP-Adresse aus (beginnt mit einer reinen Zahl und
-	// enthält einen Punkt), muss es auch eine gültige sein - sonst ist es ein Vertipper.
+	// Beginnt die Eingabe mit einer reinen Zahl und einem Punkt, wird sie als
+	// IP-Adresse geprüft, sonst als Hostname.
 	if (preg_match('/^[0-9]+\./', $s)) {
 		return filter_var($s, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
 	}
@@ -212,13 +204,17 @@ function mbp_yaml_dq($s) {
 	return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $s) . '"';
 }
 
-function mbp_config_to_yaml($cfg) {
+// Baut die Konfigurationsdatei. Mit $mit_logging = false entstehen nur die Geräte,
+// ohne Log-Level und logging-Block - diese Form wird für den Export verwendet.
+function mbp_config_to_yaml($cfg, $mit_logging = true) {
 	$loglevel = in_array($cfg["loglevel"], MBP_LOGLEVELS) ? $cfg["loglevel"] : "INFO";
 
 	$lines = [];
 	$lines[] = "# Von der LoxBerry Modbus-Proxy Plugin-GUI verwaltet.";
 	$lines[] = "# Manuelle Änderungen werden beim nächsten Speichern in der GUI überschrieben.";
-	$lines[] = "# modbus-proxy-plugin-loglevel: " . $loglevel;
+	if ($mit_logging) {
+		$lines[] = "# modbus-proxy-plugin-loglevel: " . $loglevel;
+	}
 	$lines[] = "devices:";
 	foreach ($cfg["devices"] as $d) {
 		$lines[] = "- modbus:";
@@ -235,22 +231,23 @@ function mbp_config_to_yaml($cfg) {
 			$lines[] = "  unit_id_remapping: {" . implode(", ", $pairs) . "}";
 		}
 	}
-	// Der Dienst schreibt bewusst nur nach stderr und in keine eigene Datei: das
-	// Steuerskript leitet seine Ausgabe in die gemeinsame Logdatei um, in der auch
-	// die Start-/Stopp-Meldungen und Startfehler stehen. So gibt es nur ein Log.
-	$lines[] = "logging:";
-	$lines[] = "  version: 1";
-	$lines[] = "  formatters:";
-	$lines[] = "    standard:";
-	$lines[] = '      format: "%(asctime)s %(levelname)8s %(name)s: %(message)s"';
-	$lines[] = "  handlers:";
-	$lines[] = "    console:";
-	$lines[] = "      class: logging.StreamHandler";
-	$lines[] = "      level: " . $loglevel;
-	$lines[] = "      formatter: standard";
-	$lines[] = "  root:";
-	$lines[] = "    handlers: ['console']";
-	$lines[] = "    level: " . $loglevel;
+	if ($mit_logging) {
+		// Ein einzelner Handler auf stderr; das Steuerskript leitet die Ausgabe in die
+		// Logdatei des Plugins um.
+		$lines[] = "logging:";
+		$lines[] = "  version: 1";
+		$lines[] = "  formatters:";
+		$lines[] = "    standard:";
+		$lines[] = '      format: "%(asctime)s %(levelname)8s %(name)s: %(message)s"';
+		$lines[] = "  handlers:";
+		$lines[] = "    console:";
+		$lines[] = "      class: logging.StreamHandler";
+		$lines[] = "      level: " . $loglevel;
+		$lines[] = "      formatter: standard";
+		$lines[] = "  root:";
+		$lines[] = "    handlers: ['console']";
+		$lines[] = "    level: " . $loglevel;
+	}
 	return implode("\n", $lines) . "\n";
 }
 
@@ -294,8 +291,8 @@ function mbp_yaml_to_config($text) {
 		if ($bind === null) {
 			continue;
 		}
-		// Das Plugin lauscht immer auf allen Schnittstellen; ein eingeschränkter Host
-		// aus einer fremden Datei geht beim Einlesen verloren und wird gemeldet.
+		// Ein auf eine einzelne Schnittstelle eingeschränkter Host wird verworfen und
+		// über den Rückgabewert gemeldet.
 		if (!in_array($bind["host"], MBP_BIND_HOST_ANY, true)) {
 			$hostverworfen = true;
 		}
@@ -389,10 +386,8 @@ function mbp_config_from_post($post, $loglevel_fallback = "INFO") {
 	return $cfg;
 }
 
-// Lauscht auf diesem Port ein Dienst? Bewusst über die Socket-Tabelle statt über einen
-// echten Verbindungsversuch: jede Testverbindung würde modbus-proxy als Client-Zugriff
-// werten und vier Zeilen ins Log schreiben - bei einer alle paar Sekunden aktualisierten
-// Statusseite läuft die Logdatei damit in kurzer Zeit voll.
+// Lauscht auf diesem Port ein Dienst? Fragt die Socket-Tabelle ab und baut selbst keine
+// Verbindung auf, die der Proxy als Client-Zugriff protokollieren würde.
 function mbp_port_listening($port) {
 	if (!mbp_valid_port($port)) {
 		return false;
@@ -417,8 +412,8 @@ function mbp_tail($pfad, $zeilen = 120) {
 	return implode("\n", $out);
 }
 
-// Sucht im Log die letzte aussagekräftige Fehlerzeile. Startfehler (z.B. ein belegter
-// Port) erscheinen als Python-Traceback, nicht als formatierte Log-Meldung.
+// Sucht im Log die letzte Zeile, die eine Python-Ausnahme meldet (z.B. bei einem
+// belegten Port). Liefert null, wenn keine gefunden wird.
 function mbp_start_error($logfile, $zeilen = 40) {
 	if (!file_exists($logfile) || !is_readable($logfile)) {
 		return null;

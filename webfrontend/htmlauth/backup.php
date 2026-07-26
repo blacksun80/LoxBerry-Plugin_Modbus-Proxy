@@ -27,13 +27,16 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["action"] ?? "") ==
 			if (file_exists($configfile)) {
 				copy($configfile, "$configfile.bak");
 			}
-			$yaml = mbp_config_to_yaml($parsed["config"]);
+			// Übernimmt den eingestellten Log-Level; er ist nicht Teil des Exports.
+			$neu = $parsed["config"];
+			$neu["loglevel"] = mbp_read_config($configfile)["loglevel"];
+			$yaml = mbp_config_to_yaml($neu);
 			file_put_contents($configfile, $yaml);
 			exec(escapeshellarg($ctlscript) . " restart 2>&1");
 			$message = $L["EXPORT.IMPORT_OK"];
 			$messagetype = "ok";
-			// Eine eingeschränkte listen-Adresse aus einer fremden Datei kann das Plugin
-			// nicht abbilden - der Proxy lauscht danach auf allen Schnittstellen.
+			// Meldet, wenn in der Datei eine auf eine Schnittstelle eingeschränkte
+			// listen-Adresse stand; der Proxy lauscht danach auf allen Schnittstellen.
 			if (!empty($parsed["host_verworfen"])) {
 				$message .= " " . $L["EXPORT.IMPORT_HOST_RESET"];
 				$messagetype = "error";

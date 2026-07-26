@@ -1,14 +1,11 @@
 #!/bin/bash
 
-# Hält die Logdatei des Plugins klein. Das Steuerskript kürzt sie zwar auch bei jedem
-# Start, im Dauerbetrieb läuft aber sonst nichts, das die Grösse prüft - besonders im
-# Log-Level DEBUG wächst sie sonst schnell.
-#
-# Wird von LoxBerry als User loxberry aufgerufen (siehe /etc/cron.d/lbdefaults).
+# Lässt das Steuerskript alle 5 Minuten die Grösse der Logdatei prüfen und sie bei
+# Bedarf kürzen. Wird von LoxBerry als User loxberry aufgerufen (/etc/cron.d/lbdefaults).
 
 MAILTO=""
 
-# Cron erbt die LoxBerry-Variablen nicht zuverlässig, deshalb hier explizit einlesen.
+# Liest die LoxBerry-Variablen ein, die Cron nicht zuverlässig vererbt.
 set -a
 . /etc/environment
 set +a

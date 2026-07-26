@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # Wird beim Deinstallieren des Plugins ausgeführt.
-# Stoppt den laufenden modbus-proxy-Dienst. Das per pip installierte
-# Python-Paket "modbus-proxy" selbst wird bewusst NICHT entfernt, falls
-# es anderweitig verwendet wird - siehe README.
+# Stoppt den laufenden modbus-proxy-Dienst. Das per pip installierte Python-Paket
+# "modbus-proxy" selbst bleibt installiert - siehe README.
 
 COMMAND=$0
 PTEMPDIR=$1

@@ -13,9 +13,8 @@ $logfile = "$lbplogdir/modbus-proxy.log";
 $message = "";
 $messagetype = "";
 
-// Nach start/restart prüfen, ob der Dienst wirklich läuft. Tut er es nicht, steht der
-// Grund (z.B. ein belegter Port) nur als Traceback im Log - der wird hier mit angezeigt,
-// sonst bliebe für den Nutzer nur ein unerklärtes "Dienst gestoppt".
+// Prüft nach start/restart, ob der Dienst läuft. Liefert null, wenn ja, sonst eine
+// Meldung samt der letzten Fehlerzeile aus dem Log.
 function mbp_startergebnis($ctlscript, $logfile, $L) {
 	$status = mbp_daemon_status($ctlscript);
 	if ($status["running"]) {
@@ -304,7 +303,8 @@ var mbpL = {
 	removeconfirm: <?php echo json_encode($L["CONFIG.REMOVE_DEVICE_CONFIRM"]); ?>,
 	device: <?php echo json_encode($L["CONFIG.DEVICE"]); ?>,
 	portlabel: <?php echo json_encode($L["STATUS.PORT"]); ?>,
-	portconflict: <?php echo json_encode($L["CONFIG.PORT_CONFLICT"]); ?>
+	portconflict: <?php echo json_encode($L["CONFIG.PORT_CONFLICT"]); ?>,
+	nodevices: <?php echo json_encode($L["CONFIG.NO_DEVICES"]); ?>
 };
 
 function mbpEsc(s) {
@@ -358,6 +358,20 @@ function mbpRenumberDevices() {
 	for (var i = 0; i < nrs.length; i++) {
 		nrs[i].textContent = i + 1;
 	}
+	mbpEntfernenSperren();
+}
+
+// Sperrt den Entfernen-Knopf, solange nur noch ein Gerät übrig ist.
+function mbpEntfernenSperren() {
+	var karten = document.querySelectorAll("#mbp-devices .mbp-device");
+	var letztes = karten.length <= 1;
+	for (var i = 0; i < karten.length; i++) {
+		var knopf = karten[i].querySelector(".mbp-device-remove button");
+		if (!knopf) { continue; }
+		knopf.disabled = letztes;
+		knopf.classList.toggle("ui-state-disabled", letztes);
+		knopf.title = letztes ? mbpL.nodevices : "";
+	}
 }
 
 function mbpListenPortFelder() {
@@ -365,8 +379,7 @@ function mbpListenPortFelder() {
 		document.querySelectorAll("#mbp-devices input[name$='[listen_port]']"));
 }
 
-// Nächste freie Portnummer vorschlagen, damit ein neues Gerät nicht auf einem schon
-// vergebenen Port landet.
+// Liefert die um eins erhöhte höchste vergebene Portnummer als Vorschlag.
 function mbpNaechsterPort() {
 	var hoechster = 0;
 	mbpListenPortFelder().forEach(function(f) {
@@ -386,6 +399,7 @@ function mbpAddDevice() {
 	document.getElementById("mbp-devices").appendChild(node);
 	mbpNextIdx++;
 	mbpRenumberDevices();
+	mbpMeldungenAnhaengen(node);
 	if (window.jQuery && jQuery(node).trigger) {
 		jQuery(node).trigger("create");
 	}
@@ -400,6 +414,9 @@ function mbpEntfernenAusfuehren() {
 }
 
 function mbpRemoveDevice(el) {
+	if (document.querySelectorAll("#mbp-devices .mbp-device").length <= 1) {
+		return;
+	}
 	var karte = el.closest(".mbp-device");
 	mbpZuEntfernen = karte;
 
@@ -420,8 +437,34 @@ function mbpConfirmSchliessen() {
 	mbpZuEntfernen = null;
 }
 
-// Doppelt vergebene Ports schon vor dem Absenden abfangen: modbus-proxy kann den
-// zweiten Port nicht öffnen und beendet sich dann komplett.
+// Ersetzt die Standardmeldung des Browsers durch den erklärenden Text aus dem
+// title-Attribut des Feldes. Ohne das zeigt der Browser den eigenen Text nur bei
+// Musterverletzungen, bei Zahlenfeldern dagegen seine knappe Standardmeldung.
+// Die Prüfung läuft über feld.validity und nicht über checkValidity(), da letzteres
+// selbst ein invalid-Ereignis auslöst und sich damit endlos aufrufen würde.
+function mbpMeldungSetzen(feld) {
+	if (!feld.title) {
+		return;
+	}
+	feld.setCustomValidity("");
+	if (!feld.validity.valid) {
+		feld.setCustomValidity(feld.title);
+	}
+}
+
+// Hängt die Meldungen an alle Felder eines Bereichs. Wird für nachträglich
+// hinzugefügte Geräte erneut aufgerufen.
+function mbpMeldungenAnhaengen(bereich) {
+	var felder = bereich.querySelectorAll("input[title]");
+	for (var i = 0; i < felder.length; i++) {
+		felder[i].addEventListener("input", function() { mbpMeldungSetzen(this); });
+		felder[i].addEventListener("invalid", function() { mbpMeldungSetzen(this); });
+	}
+}
+
+mbpMeldungenAnhaengen(document.getElementById("mbpform"));
+
+// Fängt doppelt vergebene Ports vor dem Absenden ab.
 document.getElementById("mbpform").addEventListener("submit", function(e) {
 	var gesehen = {};
 	var doppelt = null;
@@ -455,6 +498,8 @@ document.getElementById("mbp-confirm-overlay").addEventListener("click", functio
 		mbpConfirmSchliessen();
 	}
 });
+
+mbpEntfernenSperren();
 </script>
 
 <?php

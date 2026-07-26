@@ -15,14 +15,10 @@ CONFIGFILE="$LBPCONFIG/modbus-proxy/modbus-proxy.yml"
 LOGDIR="$LBPLOG/modbus-proxy"
 PIDFILE="$LOGDIR/modbus-proxy.pid"
 
-# Eine einzige Logdatei für alles: Start-/Stopp-Meldungen dieses Skripts, die Ausgabe
-# des Dienstes und Startfehler (Python-Tracebacks). Der Dienst schreibt deshalb nur
-# nach stderr, siehe logging-Block in der modbus-proxy.yml.
+# Nimmt die Start-/Stopp-Meldungen dieses Skripts und die gesamte Ausgabe des Dienstes auf.
 LOGFILE="$LOGDIR/modbus-proxy.log"
 
 # Obergrenze der Logdatei; beim Überschreiten bleiben die letzten KEEPBYTES erhalten.
-# Das Log liegt unter $LBPLOG, das LoxBerry auf Raspberry-Pi-Systemen in eine RAM-Disk
-# einhängt (siehe sbin/createtmpfsfoldersinit.sh) - es darf also nicht unbegrenzt wachsen.
 MAXBYTES=1048576
 KEEPBYTES=524288
 
@@ -31,9 +27,9 @@ log() {
 }
 
 trim_log() {
-	# Kürzt die Logdatei auf die letzten KEEPBYTES. Bewusst "in place" (Umleitung mit >
-	# auf dieselbe Datei) statt Umbenennen: der laufende Dienst hält die Datei geöffnet
-	# und würde nach einem Umbenennen weiter in die alte, unsichtbare Datei schreiben.
+	# Kürzt die Logdatei auf die letzten KEEPBYTES, sobald sie MAXBYTES überschreitet.
+	# Schreibt dabei in dieselbe Datei zurück (kein Umbenennen), sodass der laufende
+	# Dienst über sein offenes Dateihandle weiter hineinschreibt.
 	[ -f "$LOGFILE" ] || return 0
 	SIZE=$(stat -c %s "$LOGFILE" 2>/dev/null || echo 0)
 	[ "$SIZE" -le "$MAXBYTES" ] && return 0
@@ -53,9 +49,8 @@ as_runuser() {
 }
 
 ensure_logdir() {
-	# Legt Log-Verzeichnis und Logdatei an und stellt sicher, dass beide $RUNUSER
-	# gehören. Als root aufgerufen entstünden sonst root-eigene Dateien, in die
-	# weder der als $RUNUSER laufende Dienst noch die GUI schreiben können.
+	# Legt Log-Verzeichnis und Logdatei an. Läuft das Skript als root, gehen beide
+	# anschliessend an $RUNUSER über.
 	mkdir -p "$LOGDIR"
 	touch "$LOGFILE" 2>/dev/null
 	if [ "$(id -u)" = "0" ]; then
@@ -86,11 +81,9 @@ do_start() {
 		log "FEHLER: Konfigurationsdatei $CONFIGFILE fehlt"
 		return 1
 	fi
-	# Wichtig: "cd X && nohup CMD &" würde die gesamte &&-Kette als Subshell
-	# hintergrunden - "$!" wäre dann die PID der Subshell, nicht des
-	# tatsächlichen Prozesses. Deshalb hier ein einzelner Befehl ohne "&&".
-	# PYTHONUNBUFFERED sorgt dafür, dass die Meldungen sofort in der Logdatei
-	# stehen und nicht erst, wenn Python seinen Ausgabepuffer leert.
+	# Startet den Dienst im Hintergrund und schreibt seine PID in die PID-Datei. Ein
+	# einzelner Befehl ohne "&&", damit "$!" die PID des Dienstes liefert und nicht die
+	# einer Subshell. PYTHONUNBUFFERED lässt Python ungepuffert in die Logdatei schreiben.
 	as_runuser "PYTHONUNBUFFERED=1 nohup $BINARY --config-file $CONFIGFILE >>$LOGFILE 2>&1 & echo \$! > $PIDFILE"
 	sleep 1
 	if is_running; then
