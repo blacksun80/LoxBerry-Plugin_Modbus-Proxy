@@ -52,6 +52,10 @@ function mbp_styles() {
 .mbp-dot-active { background: #2196f3; box-shadow: 0 0 5px #2196f3; }
 
 .mbp-btnrow { margin-top: 12px; }
+/* jQuery Mobile gibt Buttons einen eigenen Aussenabstand - hier weg, damit sie
+   bündig unter dem darüberliegenden Feld beginnen. */
+.mbp-btnrow .ui-btn { margin-left: 0; }
+.mbp-autoinfo { font-size: 0.8em; color: #999; margin-left: 10px; }
 
 .mbp-device { border: 1px solid #ddd; background: #fafafa; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
 .mbp-device-head { overflow: hidden; margin-bottom: 6px; }
@@ -59,6 +63,16 @@ function mbp_styles() {
 .mbp-device-remove { float: right; }
 .mbp-device-remove .ui-btn { margin: 0; }
 .mbp-hint { font-size: 0.85em; color: #777; margin: 0 0 6px 0; }
+
+/* Ziel-Adresse: Host und Port nebeneinander, getrennt durch einen Doppelpunkt. */
+.mbp-addr { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
+.mbp-addr-host { flex: 1 1 auto; min-width: 0; }
+.mbp-addr-port { flex: 0 0 130px; }
+.mbp-addr-sep { font-weight: bold; color: #888; line-height: 2.6; }
+.mbp-addr .ui-input-text { margin: 0; }
+.mbp-subhint { display: block; font-size: 0.78em; color: #999; margin: 3px 0 0 2px; }
+.mbp-portonly { max-width: 130px; margin-bottom: 14px; }
+.mbp-portonly .ui-input-text { margin: 0; }
 
 .mbp-field { margin-bottom: 4px; }
 .mbp-field label { display: block; margin: 0 0 5px 0; }
@@ -82,20 +96,94 @@ function mbp_styles() {
 	<?php
 }
 
+define("MBP_DEFAULT_LISTEN_PORT", 9010);
+define("MBP_DEFAULT_DEVICE_PORT", 502);
+
+// Host-Teil der listen-Adresse, den das Plugin schreibt: der Proxy lauscht immer auf
+// allen Netzwerkschnittstellen. modbus-proxy ersetzt einen leeren Host intern durch "0",
+// beides bedeutet dasselbe.
+define("MBP_BIND_HOST", "0");
+
+// Host-Teile, die "alle Netzwerkschnittstellen" bedeuten. Steht in einer eingelesenen
+// Datei etwas anderes, war die Adresse auf eine einzelne Schnittstelle eingeschränkt.
+define("MBP_BIND_HOST_ANY", ["0", "0.0.0.0", "", "::"]);
+
+// Muster für einen Hostnamen bzw. eine IPv4-Adresse. Wird auch als HTML-pattern an das
+// Eingabefeld gegeben, damit Browser und Server dieselbe Regel prüfen.
+define("MBP_HOST_PATTERN", '[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)*');
+
+// Muster für die Unit-ID-Umleitung: "1:0" oder "1:0, 2:5". Leer ist ebenfalls zulässig,
+// ein HTML-pattern greift bei leeren Feldern nicht.
+define("MBP_REMAP_PATTERN", '\s*\d{1,3}\s*:\s*\d{1,3}\s*(,\s*\d{1,3}\s*:\s*\d{1,3}\s*)*');
+
+// Obergrenzen der Zahlenfelder. Sie begrenzen nur die Eingabe in der GUI - modbus-proxy
+// selbst kennt keine solchen Grenzen.
+define("MBP_MAX_TIMEOUT", 3600);
+define("MBP_MAX_CONNECTION_TIME", 600);
+
+// Modbus-Unit-IDs sind ein einzelnes Byte.
+define("MBP_MAX_UNIT_ID", 255);
+
+// Anzahl Zeilen, die die Log-Seite je Datei anzeigt.
+define("MBP_LOG_LINES", 120);
+define("MBP_DAEMONLOG_LINES", 60);
+
+// Abstand der automatischen Aktualisierung in Millisekunden.
+define("MBP_POLL_MS", 5000);
+
 function mbp_default_config() {
 	return [
 		"loglevel" => "INFO",
-		"devices" => [
-			["url" => "", "timeout" => 10, "connection_time" => 0, "bind" => "", "unit_id_remapping" => []],
-		],
+		"devices" => [mbp_default_device()],
 	];
 }
 
-// Modbus-proxy erwartet reine "host:port"-Adressen. Die Einschränkung auf dieses
-// Format verhindert nebenbei, dass Sonderzeichen (Anführungszeichen etc.) überhaupt
-// in die YAML-Datei gelangen können.
-function mbp_valid_hostport($s) {
-	return (bool)preg_match('/^[A-Za-z0-9.\-]+:[0-9]{1,5}$/', $s);
+function mbp_default_device() {
+	return [
+		"host" => "",
+		"device_port" => MBP_DEFAULT_DEVICE_PORT,
+		"listen_port" => MBP_DEFAULT_LISTEN_PORT,
+		"timeout" => 10,
+		"connection_time" => 0,
+		"unit_id_remapping" => [],
+	];
+}
+
+// Hostname oder IPv4-Adresse. Die Einschränkung auf dieses Format verhindert nebenbei,
+// dass Sonderzeichen (Anführungszeichen etc.) in die YAML-Datei gelangen können.
+function mbp_valid_host($s) {
+	return strlen($s) <= 253 && (bool)preg_match('/^' . MBP_HOST_PATTERN . '$/', $s);
+}
+
+function mbp_valid_port($p) {
+	return is_numeric($p) && (int)$p == $p && (int)$p >= 1 && (int)$p <= 65535;
+}
+
+// Zahl innerhalb der Grenzen? Nicht-Zahlen und Werte ausserhalb liefern den Ersatzwert.
+function mbp_clamp_number($wert, $min, $max, $ersatz) {
+	if (!is_numeric($wert)) {
+		return $ersatz;
+	}
+	$wert = (float)$wert;
+	return ($wert < $min || $wert > $max) ? $ersatz : $wert;
+}
+
+function mbp_valid_unit_id($id) {
+	return is_numeric($id) && (int)$id == $id && (int)$id >= 0 && (int)$id <= MBP_MAX_UNIT_ID;
+}
+
+// Zerlegt eine "host:port"-Adresse. Liefert null, wenn das Format nicht stimmt.
+function mbp_split_address($adresse) {
+	$pos = strrpos($adresse, ":");
+	if ($pos === false) {
+		return null;
+	}
+	$host = substr($adresse, 0, $pos);
+	$port = substr($adresse, $pos + 1);
+	if (!ctype_digit($port) || !mbp_valid_port($port)) {
+		return null;
+	}
+	return ["host" => $host, "port" => (int)$port];
 }
 
 function mbp_yaml_dq($s) {
@@ -112,11 +200,11 @@ function mbp_config_to_yaml($cfg, $logfile) {
 	$lines[] = "devices:";
 	foreach ($cfg["devices"] as $d) {
 		$lines[] = "- modbus:";
-		$lines[] = "    url: " . mbp_yaml_dq($d["url"]);
+		$lines[] = "    url: " . mbp_yaml_dq($d["host"] . ":" . (int)$d["device_port"]);
 		$lines[] = "    timeout: " . (float)$d["timeout"];
 		$lines[] = "    connection_time: " . (float)$d["connection_time"];
 		$lines[] = "  listen:";
-		$lines[] = "    bind: " . mbp_yaml_dq($d["bind"]);
+		$lines[] = "    bind: " . mbp_yaml_dq(MBP_BIND_HOST . ":" . (int)$d["listen_port"]);
 		if (!empty($d["unit_id_remapping"])) {
 			$pairs = [];
 			foreach ($d["unit_id_remapping"] as $k => $v) {
@@ -166,33 +254,46 @@ function mbp_yaml_to_config($text) {
 
 	$blocks = preg_split('/^- modbus:\s*$/m', $devicesblock);
 	$devices = [];
+	$hostverworfen = false;
 	foreach ($blocks as $block) {
 		if (trim($block) === "") {
 			continue;
 		}
-		$d = ["url" => "", "timeout" => 10, "connection_time" => 0, "bind" => "", "unit_id_remapping" => []];
+		$d = mbp_default_device();
 		if (!preg_match('/^\s*url:\s*"?([^"\r\n]+?)"?\s*$/m', $block, $mm)) {
 			continue;
 		}
-		$d["url"] = trim($mm[1]);
-		if (!preg_match('/^\s*bind:\s*"?([^"\r\n]+?)"?\s*$/m', $block, $mm)) {
+		$ziel = mbp_split_address(trim($mm[1]));
+		if ($ziel === null || !mbp_valid_host($ziel["host"])) {
 			continue;
 		}
-		$d["bind"] = trim($mm[1]);
-		if (!mbp_valid_hostport($d["url"]) || !mbp_valid_hostport($d["bind"])) {
+		$d["host"] = $ziel["host"];
+		$d["device_port"] = $ziel["port"];
+
+		if (!preg_match('/^\s*bind:\s*"?([^"\r\n]*?)"?\s*$/m', $block, $mm)) {
 			continue;
 		}
+		$bind = mbp_split_address(trim($mm[1]));
+		if ($bind === null) {
+			continue;
+		}
+		// Das Plugin lauscht immer auf allen Schnittstellen; ein eingeschränkter Host
+		// aus einer fremden Datei geht beim Einlesen verloren und wird gemeldet.
+		if (!in_array($bind["host"], MBP_BIND_HOST_ANY, true)) {
+			$hostverworfen = true;
+		}
+		$d["listen_port"] = $bind["port"];
 		if (preg_match('/^\s*timeout:\s*([0-9.]+)/m', $block, $mm)) {
-			$d["timeout"] = $mm[1] + 0;
+			$d["timeout"] = mbp_clamp_number($mm[1], 0, MBP_MAX_TIMEOUT, 10);
 		}
 		if (preg_match('/^\s*connection_time:\s*([0-9.]+)/m', $block, $mm)) {
-			$d["connection_time"] = $mm[1] + 0;
+			$d["connection_time"] = mbp_clamp_number($mm[1], 0, MBP_MAX_CONNECTION_TIME, 0);
 		}
 		if (preg_match('/unit_id_remapping:\s*\{([^}]*)\}/', $block, $mm)) {
 			foreach (explode(",", $mm[1]) as $pair) {
 				if (strpos($pair, ":") !== false) {
 					[$k, $v] = array_map("trim", explode(":", $pair, 2));
-					if ($k !== "" && $v !== "") {
+					if (mbp_valid_unit_id($k) && mbp_valid_unit_id($v)) {
 						$d["unit_id_remapping"][(int)$k] = (int)$v;
 					}
 				}
@@ -205,7 +306,11 @@ function mbp_yaml_to_config($text) {
 		return ["ok" => false, "error" => "no_valid_device"];
 	}
 
-	return ["ok" => true, "config" => ["loglevel" => $loglevel, "devices" => $devices]];
+	return [
+		"ok" => true,
+		"config" => ["loglevel" => $loglevel, "devices" => $devices],
+		"host_verworfen" => $hostverworfen,
+	];
 }
 
 function mbp_read_config($path) {
@@ -229,42 +334,42 @@ function mbp_config_from_post($post, $loglevel_fallback = "INFO") {
 	if (!isset($post["devices"]) || !is_array($post["devices"])) {
 		return $cfg;
 	}
+	$portsvergeben = [];
 	foreach ($post["devices"] as $dev) {
-		$url = trim($dev["url"] ?? "");
-		$bind = trim($dev["bind"] ?? "");
-		if (!mbp_valid_hostport($url) || !mbp_valid_hostport($bind)) {
+		$host = trim($dev["host"] ?? "");
+		$deviceport = trim($dev["device_port"] ?? "");
+		$listenport = trim($dev["listen_port"] ?? "");
+		if (!mbp_valid_host($host) || !mbp_valid_port($deviceport) || !mbp_valid_port($listenport)) {
 			continue;
 		}
+		// Zwei Geräte auf demselben Port kann modbus-proxy nicht öffnen.
+		if (in_array((int)$listenport, $portsvergeben, true)) {
+			$cfg["portkonflikt"] = true;
+			continue;
+		}
+		$portsvergeben[] = (int)$listenport;
 		$remap = [];
 		$remapraw = trim($dev["unit_id_remapping"] ?? "");
 		if ($remapraw !== "") {
 			foreach (explode(",", $remapraw) as $pair) {
 				if (strpos($pair, ":") !== false) {
 					[$k, $v] = array_map("trim", explode(":", $pair, 2));
-					if ($k !== "" && $v !== "" && is_numeric($k) && is_numeric($v)) {
+					if (mbp_valid_unit_id($k) && mbp_valid_unit_id($v)) {
 						$remap[(int)$k] = (int)$v;
 					}
 				}
 			}
 		}
 		$cfg["devices"][] = [
-			"url" => $url,
-			"timeout" => is_numeric($dev["timeout"] ?? null) ? (float)$dev["timeout"] : 10,
-			"connection_time" => is_numeric($dev["connection_time"] ?? null) ? (float)$dev["connection_time"] : 0,
-			"bind" => $bind,
+			"host" => $host,
+			"device_port" => (int)$deviceport,
+			"listen_port" => (int)$listenport,
+			"timeout" => mbp_clamp_number($dev["timeout"] ?? null, 0, MBP_MAX_TIMEOUT, 10),
+			"connection_time" => mbp_clamp_number($dev["connection_time"] ?? null, 0, MBP_MAX_CONNECTION_TIME, 0),
 			"unit_id_remapping" => $remap,
 		];
 	}
 	return $cfg;
-}
-
-function mbp_bind_port($bind) {
-	$pos = strrpos($bind, ":");
-	if ($pos === false) {
-		return null;
-	}
-	$port = substr($bind, $pos + 1);
-	return ctype_digit($port) ? (int)$port : null;
 }
 
 function mbp_port_reachable($port, $timeout = 0.5) {
@@ -277,6 +382,34 @@ function mbp_port_reachable($port, $timeout = 0.5) {
 		return true;
 	}
 	return false;
+}
+
+// Letzte Zeilen einer Logdatei lesen, ohne die komplette Datei in den Speicher zu laden.
+function mbp_tail($pfad, $zeilen = 120) {
+	if (!file_exists($pfad) || !is_readable($pfad)) {
+		return null;
+	}
+	$out = [];
+	exec("tail -n " . (int)$zeilen . " " . escapeshellarg($pfad) . " 2>/dev/null", $out);
+	return implode("\n", $out);
+}
+
+// Sucht im Startprotokoll die letzte aussagekräftige Fehlerzeile. modbus-proxy schreibt
+// Startfehler (z.B. belegter Port) nur nach stderr, nicht in seine eigene Logdatei -
+// stderr landet über das Steuerskript in daemon.log.
+function mbp_start_error($daemonlog, $zeilen = 40) {
+	if (!file_exists($daemonlog) || !is_readable($daemonlog)) {
+		return null;
+	}
+	$out = [];
+	exec("tail -n " . (int)$zeilen . " " . escapeshellarg($daemonlog) . " 2>/dev/null", $out);
+	$treffer = null;
+	foreach ($out as $zeile) {
+		if (preg_match('/^\s*(OSError|[A-Za-z_.]*(Error|Exception)):\s*(.+)$/', trim($zeile), $m)) {
+			$treffer = trim($zeile);
+		}
+	}
+	return $treffer;
 }
 
 function mbp_daemon_status($ctlscript) {
@@ -324,13 +457,12 @@ function mbp_socket_stats($filter) {
 // Datenverkehr eines konfigurierten Geräts: clientseitig (Clients -> Proxy) und
 // geräteseitig (Proxy -> echtes Modbus-Gerät).
 function mbp_device_traffic($device) {
-	$port = mbp_bind_port($device["bind"]);
-	$client = $port === null
-		? ["conns" => 0, "rx" => 0, "tx" => 0, "last_rx_ms" => null, "last_tx_ms" => null]
-		: mbp_socket_stats("( sport = :$port )");
-	$dev = mbp_valid_hostport($device["url"])
-		? mbp_socket_stats("( dst " . $device["url"] . " )")
-		: ["conns" => 0, "rx" => 0, "tx" => 0, "last_rx_ms" => null, "last_tx_ms" => null];
+	$leer = ["conns" => 0, "rx" => 0, "tx" => 0, "last_rx_ms" => null, "last_tx_ms" => null];
+	$port = (int)$device["listen_port"];
+	$client = mbp_valid_port($port) ? mbp_socket_stats("( sport = :$port )") : $leer;
+	$dev = mbp_valid_host($device["host"]) && mbp_valid_port($device["device_port"])
+		? mbp_socket_stats("( dst " . $device["host"] . ":" . (int)$device["device_port"] . " )")
+		: $leer;
 	return ["client" => $client, "device" => $dev];
 }
 

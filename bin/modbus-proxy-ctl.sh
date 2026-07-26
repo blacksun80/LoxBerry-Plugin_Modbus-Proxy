@@ -9,10 +9,17 @@
 set -u
 
 BINARY=/usr/local/bin/modbus-proxy
-CONFIGFILE="$LBPCONFIG/modbus-proxy/modbus-proxy.yml"
-PIDFILE="$LBPLOG/modbus-proxy/modbus-proxy.pid"
-LOGFILE="$LBPLOG/modbus-proxy/daemon.log"
 RUNUSER=loxberry
+
+# Der Plugin-Ordner ist nicht garantiert "modbus-proxy": LoxBerry hängt bei einem
+# bereits belegten Namen die ersten drei Zeichen des md5-Hashes an. Dieses Skript liegt
+# immer unter $LBPBIN/<Ordner>/, der Ordnername steht also im eigenen Pfad.
+PLUGINDIR=$(basename "$(dirname "$(readlink -f "$0")")")
+
+CONFIGFILE="$LBPCONFIG/$PLUGINDIR/modbus-proxy.yml"
+LOGDIR="$LBPLOG/$PLUGINDIR"
+PIDFILE="$LOGDIR/modbus-proxy.pid"
+LOGFILE="$LOGDIR/daemon.log"
 
 log() {
 	echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >>"$LOGFILE"
@@ -28,6 +35,17 @@ as_runuser() {
 	fi
 }
 
+ensure_logdir() {
+	# Legt Log-Verzeichnis und Logdatei an und stellt sicher, dass beide $RUNUSER
+	# gehören. Als root aufgerufen entstünden sonst root-eigene Dateien, in die
+	# weder der als $RUNUSER laufende Dienst noch die GUI schreiben können.
+	mkdir -p "$LOGDIR"
+	touch "$LOGFILE" 2>/dev/null
+	if [ "$(id -u)" = "0" ]; then
+		chown -R "$RUNUSER:$RUNUSER" "$LOGDIR"
+	fi
+}
+
 is_running() {
 	if [ -f "$PIDFILE" ]; then
 		PID=$(cat "$PIDFILE" 2>/dev/null)
@@ -39,7 +57,6 @@ is_running() {
 }
 
 do_start() {
-	mkdir -p "$LBPLOG/modbus-proxy"
 	if is_running; then
 		log "Start übersprungen, läuft bereits (PID $(cat "$PIDFILE"))"
 		return 0
@@ -83,12 +100,15 @@ do_stop() {
 
 case "${1:-}" in
 	start)
+		ensure_logdir
 		do_start
 		;;
 	stop)
+		ensure_logdir
 		do_stop
 		;;
 	restart)
+		ensure_logdir
 		do_stop
 		sleep 1
 		do_start

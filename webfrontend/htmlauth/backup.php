@@ -32,6 +32,12 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["action"] ?? "") ==
 			exec(escapeshellarg($ctlscript) . " restart 2>&1");
 			$message = $L["EXPORT.IMPORT_OK"];
 			$messagetype = "ok";
+			// Eine eingeschränkte listen-Adresse aus einer fremden Datei kann das Plugin
+			// nicht abbilden - der Proxy lauscht danach auf allen Schnittstellen.
+			if (!empty($parsed["host_verworfen"])) {
+				$message .= " " . $L["EXPORT.IMPORT_HOST_RESET"];
+				$messagetype = "error";
+			}
 		}
 	}
 }
@@ -52,7 +58,7 @@ mbp_styles();
 <div class="mbp-box">
 	<p class="mbp-hint"><?php echo $L["EXPORT.EXPORT_HINT"]; ?></p>
 	<p><?php echo $L["EXPORT.CURRENT_DEVICES"]; ?>: <b><?php echo count($cfg["devices"]); ?></b></p>
-	<a href="export.php" data-role="button" data-inline="true" data-icon="arrow-d"><?php echo $L["EXPORT.EXPORT_BTN"]; ?></a>
+	<a href="export.php" data-role="button" data-inline="true" data-mini="true" data-icon="arrow-d"><?php echo $L["EXPORT.EXPORT_BTN"]; ?></a>
 </div>
 
 <p class="wide"><?php echo $L["EXPORT.IMPORT_HEAD"]; ?></p>
@@ -62,7 +68,7 @@ mbp_styles();
 		<input type="hidden" name="action" value="import">
 		<label for="mbp-importfile"><?php echo $L["EXPORT.IMPORT_LABEL"]; ?></label>
 		<input id="mbp-importfile" type="file" name="importfile" accept=".yml,.yaml" data-mini="true">
-		<button type="submit" data-role="button" data-inline="true" data-theme="b" data-icon="arrow-u"><?php echo $L["EXPORT.IMPORT_BTN"]; ?></button>
+		<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="arrow-u"><?php echo $L["EXPORT.IMPORT_BTN"]; ?></button>
 	</form>
 </div>
 

@@ -1,5 +1,5 @@
 # Diese Datei wird von der Plugin-GUI verwaltet (Konfiguration -> Speichern).
-# Manuelle Aenderungen werden beim naechsten Speichern in der GUI ueberschrieben.
+# Manuelle Änderungen werden beim nächsten Speichern in der GUI überschrieben.
 # Format: https://pypi.org/project/modbus-proxy/
 devices:
 - modbus:

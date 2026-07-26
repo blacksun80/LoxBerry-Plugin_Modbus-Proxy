@@ -32,17 +32,8 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["action"] ?? "") ==
 
 $cfg = mbp_read_config($configfile);
 
-// Letzte Zeilen der Logdatei lesen, ohne die komplette Datei in den Speicher zu laden.
-function mbp_tail($pfad, $zeilen = 120) {
-	if (!file_exists($pfad) || !is_readable($pfad)) {
-		return null;
-	}
-	$out = [];
-	exec("tail -n " . (int)$zeilen . " " . escapeshellarg($pfad) . " 2>/dev/null", $out);
-	return implode("\n", $out);
-}
-
-$loginhalt = mbp_tail($logfile);
+$loginhalt = mbp_tail($logfile, MBP_LOG_LINES);
+$daemoninhalt = mbp_tail($daemonlog, MBP_DAEMONLOG_LINES);
 // Pfad relativ zum LoxBerry-Log-Verzeichnis, so erwartet ihn der System-Logviewer.
 $logrelativ = "plugins/" . basename($lbplogdir) . "/" . basename($logfile);
 
@@ -69,7 +60,9 @@ mbp_styles();
 				<?php endforeach; ?>
 			</select>
 		</div>
-		<button type="submit" data-role="button" data-inline="true" data-theme="b" data-icon="check"><?php echo $L["CONFIG.SAVE"]; ?></button>
+		<div class="mbp-btnrow">
+			<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="check"><?php echo $L["CONFIG.SAVE"]; ?></button>
+		</div>
 	</form>
 </div>
 
@@ -89,18 +82,70 @@ mbp_styles();
 		<p class="mbp-loginfo"><?php echo $L["LOG.TAIL_INFO"]; ?> &mdash; <?php echo htmlspecialchars($logfile); ?></p>
 	<?php endif; ?>
 	<div class="mbp-btnrow">
-		<button type="button" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" onclick="location.reload();"><?php echo $L["LOG.REFRESH"]; ?></button>
+		<button type="button" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" onclick="mbpLogsLaden();"><?php echo $L["LOG.REFRESH"]; ?></button>
+		<span class="mbp-autoinfo"><?php echo $L["LOG.AUTO_REFRESH"]; ?></span>
+	</div>
+</div>
+
+<p class="wide"><?php echo $L["LOG.DAEMON_HEAD"]; ?></p>
+<div class="mbp-box">
+	<p class="mbp-hint"><?php echo $L["LOG.DAEMON_HINT"]; ?></p>
+	<?php if ($daemoninhalt === null || trim($daemoninhalt) === ""): ?>
+		<p><?php echo $L["LOG.EMPTY"]; ?></p>
+	<?php else: ?>
+		<pre class="mbp-logview" id="mbp-daemonview"><?php echo htmlspecialchars($daemoninhalt); ?></pre>
+		<p class="mbp-loginfo"><?php echo htmlspecialchars($daemonlog); ?></p>
+	<?php endif; ?>
+	<div class="mbp-btnrow">
+		<button type="button" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" onclick="mbpLogsLaden();"><?php echo $L["LOG.REFRESH"]; ?></button>
+		<span class="mbp-autoinfo"><?php echo $L["LOG.AUTO_REFRESH"]; ?></span>
 	</div>
 </div>
 
 <script>
+// Gilt als "am Ende", solange der Abstand kleiner als diese Zahl an Pixeln ist.
+var MBP_ENDE_TOLERANZ = 30;
+
+function mbpAmEnde(el) {
+	return el.scrollHeight - el.scrollTop - el.clientHeight < MBP_ENDE_TOLERANZ;
+}
+
+function mbpAnsEnde(el) {
+	el.scrollTop = el.scrollHeight;
+}
+
 // Ans Ende der Logausgabe springen, dort stehen die neuesten Meldungen.
-(function() {
-	var v = document.getElementById("mbp-logview");
+["mbp-logview", "mbp-daemonview"].forEach(function(id) {
+	var v = document.getElementById(id);
 	if (v) {
-		v.scrollTop = v.scrollHeight;
+		mbpAnsEnde(v);
 	}
-})();
+});
+
+// Neuen Logtext einsetzen. Wer gerade weiter oben liest, wird nicht ans Ende gerissen.
+function mbpLogSetzen(id, text) {
+	var v = document.getElementById(id);
+	if (!v || text === null || text === undefined) {
+		return;
+	}
+	if (v.textContent === text) {
+		return;
+	}
+	var warAmEnde = mbpAmEnde(v);
+	v.textContent = text;
+	if (warAmEnde) {
+		mbpAnsEnde(v);
+	}
+}
+
+function mbpLogsLaden() {
+	fetch("logdata.php").then(function(r) { return r.json(); }).then(function(d) {
+		mbpLogSetzen("mbp-logview", d.log);
+		mbpLogSetzen("mbp-daemonview", d.daemon);
+	}).catch(function() {});
+}
+
+setInterval(mbpLogsLaden, <?php echo MBP_POLL_MS; ?>);
 </script>
 
 <?php

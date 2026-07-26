@@ -95,8 +95,8 @@ Der Statusbereich zeigt:
 Je konfiguriertem Gerät:
 
 ^ Feld ^ Bedeutung ^
-| Ziel-Adresse (Host:Port) | Adresse des echten Modbus-TCP-Geräts, z.B. ''192.168.1.10:502'' (Standard-Port 502) |
-| Listen-Adresse (Host:Port) | Adresse, unter der der Proxy für die Clients erreichbar ist - **nicht** die Geräteadresse. ''0'' als Host = alle Netzwerkschnittstellen des LoxBerry; die Portnummer dahinter tragen die Clients in ihrer eigenen Modbus-Konfiguration ein |
+| Ziel-Adresse des Modbus-Geräts | Zwei Felder: IP-Adresse oder Hostname des echten Modbus-TCP-Geräts (z.B. ''192.168.1.10'') und dessen Port (Standard 502) |
+| Port für die Clients | Portnummer, unter der der Proxy dieses Gerät bereitstellt - **nicht** der Port des Geräts. Die Clients verbinden sich mit der IP des LoxBerry und dieser Portnummer. Der Proxy lauscht dabei immer auf allen Netzwerkschnittstellen. Jedes Gerät braucht eine eigene Portnummer (z.B. 9010, 9011, 9012), denn allein über den Port entscheidet ein Client, mit welchem Gerät er spricht |
 | Timeout (s) | Wie lange auf eine Antwort des echten Geräts gewartet wird |
 | Verbindungsverzögerung (s) | Wartezeit nach dem Verbindungsaufbau zum Gerät, bevor die erste Anfrage gesendet wird (nur bei Verbindungsfehlern direkt nach dem Connect erhöhen) |
 | Unit-ID-Umleitung (optional) | Leitet eine vom Client angefragte Unit-ID auf eine andere Unit-ID am echten Gerät um, Format ''1:0, 2:1'' |
@@ -105,9 +105,11 @@ Je konfiguriertem Gerät:
 
 ==== Log ====
 
-Legt fest, wie ausführlich der Dienst protokolliert (DEBUG/INFO/WARNING/ERROR) und zeigt die
-letzten 120 Zeilen der Logdatei direkt in der GUI. Über den Button lässt sich das vollständige
-Log im LoxBerry-eigenen Log-Viewer öffnen.
+Legt fest, wie ausführlich der Dienst protokolliert (DEBUG/INFO/WARNING/ERROR) und zeigt zwei
+Protokolle direkt in der GUI, die sich beide alle 5 Sekunden von selbst aktualisieren:
+
+  * **Logdatei** — die letzten 120 Zeilen der Meldungen des Dienstes. Über den Button lässt sich \\ das vollständige Log im LoxBerry-eigenen Log-Viewer öffnen.
+  * **Startprotokoll** — Protokoll des Start-/Stopp-Vorgangs. Startet der Dienst nicht (z.B. weil \\ eine Portnummer bereits von einem anderen Programm belegt ist), steht der Grund hier - die \\ Logdatei oben bleibt in diesem Fall stumm.
 
 ==== Backup/Restore ====
 
@@ -121,7 +123,7 @@ selbst - nur mit anderer Adresse:
 
   - In Loxone Config einen **Modbus-TCP-Server** anlegen.
   - Als Adresse die **IP-Adresse des LoxBerry** eintragen.
-  - Als Port die in der Plugin-GUI konfigurierte **Listen-Adresse** (z.B. ''9010'') eintragen - \\ nicht den Port des echten Geräts.
+  - Als Port den in der Plugin-GUI konfigurierten **Port für die Clients** (z.B. ''9010'') \\ eintragen - nicht den Port des echten Geräts.
   - Register/Datenpunkte wie gewohnt anlegen; der Proxy reicht alle Anfragen transparent an das \\ echte Gerät weiter.
 
 Mehrere Miniserver bzw. mehrere Clients können sich so denselben Modbus-TCP-Anschluss teilen,

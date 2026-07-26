@@ -9,9 +9,24 @@ $L = LBSystem::readlanguage("language.ini");
 $configfile = "$lbpconfigdir/modbus-proxy.yml";
 $ctlscript = "$lbpbindir/modbus-proxy-ctl.sh";
 $logfile = "$lbplogdir/modbus-proxy.log";
+$daemonlog = "$lbplogdir/daemon.log";
 
 $message = "";
 $messagetype = "";
+
+// Nach start/restart prüfen, ob der Dienst wirklich läuft. Tut er es nicht, steht der
+// Grund (z.B. belegter Port) nur im Startprotokoll - der wird hier mit angezeigt,
+// sonst bliebe für den Nutzer nur ein unerklärtes "Dienst gestoppt".
+function mbp_startergebnis($ctlscript, $daemonlog, $L) {
+	$status = mbp_daemon_status($ctlscript);
+	if ($status["running"]) {
+		return null;
+	}
+	$fehler = mbp_start_error($daemonlog);
+	return $fehler === null
+		? $L["STATUS.START_FAILED"]
+		: $L["STATUS.START_FAILED"] . " " . $fehler;
+}
 
 function mbp_remap_to_text($map) {
 	if (empty($map)) {
@@ -30,15 +45,19 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST") {
 	if ($action === "save") {
 		$alt = mbp_read_config($configfile);
 		$cfg = mbp_config_from_post($_POST, $alt["loglevel"]);
-		if (empty($cfg["devices"])) {
+		if (!empty($cfg["portkonflikt"])) {
+			$message = $L["CONFIG.PORT_CONFLICT"];
+			$messagetype = "error";
+		} elseif (empty($cfg["devices"])) {
 			$message = $L["CONFIG.VALIDATION_ERROR"];
 			$messagetype = "error";
 		} else {
 			$yaml = mbp_config_to_yaml($cfg, $logfile);
 			if (file_put_contents($configfile, $yaml) !== false) {
 				exec(escapeshellarg($ctlscript) . " restart 2>&1");
-				$message = $L["CONFIG.SAVED_OK"];
-				$messagetype = "ok";
+				$fehler = mbp_startergebnis($ctlscript, $daemonlog, $L);
+				$message = $fehler === null ? $L["CONFIG.SAVED_OK"] : $L["CONFIG.SAVED_BUT_FAILED"] . " " . $fehler;
+				$messagetype = $fehler === null ? "ok" : "error";
 			} else {
 				$message = $L["CONFIG.SAVE_ERROR"];
 				$messagetype = "error";
@@ -46,8 +65,14 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST") {
 		}
 	} elseif (in_array($action, ["start", "stop", "restart"])) {
 		exec(escapeshellarg($ctlscript) . " " . escapeshellarg($action) . " 2>&1", $out, $rc);
-		$message = ($rc === 0 || $action !== "start") ? $L["STATUS.ACTION_OK"] : $L["STATUS.ACTION_ERROR"];
-		$messagetype = ($rc === 0) ? "ok" : "error";
+		if ($action === "stop") {
+			$message = $L["STATUS.ACTION_OK"];
+			$messagetype = "ok";
+		} else {
+			$fehler = mbp_startergebnis($ctlscript, $daemonlog, $L);
+			$message = $fehler === null ? $L["STATUS.ACTION_OK"] : $fehler;
+			$messagetype = $fehler === null ? "ok" : "error";
+		}
 	}
 }
 
@@ -84,7 +109,7 @@ mbp_styles();
 
 	<div id="mbp-status-devices">
 	<?php foreach ($cfg["devices"] as $d):
-		$port = mbp_bind_port($d["bind"]);
+		$port = (int)$d["listen_port"];
 		$up = $status["running"] && mbp_port_reachable($port);
 		$tr = mbp_device_traffic($d);
 		$rxact = mbp_is_active($tr["client"]["last_rx_ms"]);
@@ -93,7 +118,7 @@ mbp_styles();
 		<div class="mbp-conn">
 			<div class="mbp-conn-head">
 				<span class="mbp-dot <?php echo $up ? "mbp-dot-up" : "mbp-dot-down"; ?>"></span>
-				<span class="mbp-conn-route"><?php echo htmlspecialchars($d["bind"]); ?> &rarr; <?php echo htmlspecialchars($d["url"]); ?></span>
+				<span class="mbp-conn-route"><?php echo $L["STATUS.PORT"]; ?> <?php echo $port; ?> &rarr; <?php echo htmlspecialchars($d["host"] . ":" . (int)$d["device_port"]); ?></span>
 				&nbsp;<?php echo $up ? $L["STATUS.PORT_OPEN"] : $L["STATUS.PORT_CLOSED"]; ?>
 			</div>
 			<div class="mbp-conn-meta">
@@ -109,15 +134,15 @@ mbp_styles();
 	<div class="mbp-btnrow">
 		<form action="index.php" method="post" style="display:inline;">
 			<input type="hidden" name="action" value="start">
-			<button type="submit" data-role="button" data-inline="true" data-mini="true"><?php echo $L["STATUS.BTN_START"]; ?></button>
+			<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="power"><?php echo $L["STATUS.BTN_START"]; ?></button>
 		</form>
 		<form action="index.php" method="post" style="display:inline;">
 			<input type="hidden" name="action" value="stop">
-			<button type="submit" data-role="button" data-inline="true" data-mini="true"><?php echo $L["STATUS.BTN_STOP"]; ?></button>
+			<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="forbidden"><?php echo $L["STATUS.BTN_STOP"]; ?></button>
 		</form>
 		<form action="index.php" method="post" style="display:inline;">
 			<input type="hidden" name="action" value="restart">
-			<button type="submit" data-role="button" data-inline="true" data-mini="true"><?php echo $L["STATUS.BTN_RESTART"]; ?></button>
+			<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="refresh"><?php echo $L["STATUS.BTN_RESTART"]; ?></button>
 		</form>
 	</div>
 </div>
@@ -144,28 +169,54 @@ mbp_styles();
 
 					<label><?php echo $L["CONFIG.MODBUS_URL"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.MODBUS_URL_HINT"]; ?></p>
-					<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][url]" value="<?php echo htmlspecialchars($d["url"]); ?>" required>
+					<div class="mbp-addr">
+						<div class="mbp-addr-host">
+							<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][host]" value="<?php echo htmlspecialchars($d["host"]); ?>" required
+								pattern="<?php echo htmlspecialchars(MBP_HOST_PATTERN); ?>" maxlength="253"
+								title="<?php echo htmlspecialchars($L["CONFIG.HOST_INVALID"]); ?>" placeholder="192.168.1.10">
+							<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_HOST_SUB"]; ?></span>
+						</div>
+						<span class="mbp-addr-sep">:</span>
+						<div class="mbp-addr-port">
+							<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[<?php echo $i; ?>][device_port]" value="<?php echo (int)$d["device_port"]; ?>" required
+								title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
+							<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_PORT_SUB"]; ?></span>
+						</div>
+					</div>
 
-					<label><?php echo $L["CONFIG.LISTEN_BIND"]; ?></label>
-					<p class="mbp-hint"><?php echo $L["CONFIG.LISTEN_BIND_HINT"]; ?></p>
-					<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][bind]" value="<?php echo htmlspecialchars($d["bind"]); ?>" required>
+					<label><?php echo $L["CONFIG.LISTEN_PORT"]; ?></label>
+					<p class="mbp-hint"><?php echo $L["CONFIG.LISTEN_PORT_HINT"]; ?></p>
+					<div class="mbp-portonly">
+						<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[<?php echo $i; ?>][listen_port]" value="<?php echo (int)$d["listen_port"]; ?>" required
+							title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
+					</div>
 
 					<label><?php echo $L["CONFIG.TIMEOUT"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.TIMEOUT_HINT"]; ?></p>
-					<input data-mini="true" type="number" step="0.1" min="0" name="devices[<?php echo $i; ?>][timeout]" value="<?php echo htmlspecialchars($d["timeout"]); ?>">
+					<div class="mbp-portonly">
+						<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_TIMEOUT; ?>" required
+							name="devices[<?php echo $i; ?>][timeout]" value="<?php echo htmlspecialchars($d["timeout"]); ?>"
+							title="<?php echo htmlspecialchars($L["CONFIG.TIMEOUT_INVALID"]); ?>">
+					</div>
 
 					<label><?php echo $L["CONFIG.CONNECTION_TIME"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.CONNECTION_TIME_HINT"]; ?></p>
-					<input data-mini="true" type="number" step="0.1" min="0" name="devices[<?php echo $i; ?>][connection_time]" value="<?php echo htmlspecialchars($d["connection_time"]); ?>">
+					<div class="mbp-portonly">
+						<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_CONNECTION_TIME; ?>" required
+							name="devices[<?php echo $i; ?>][connection_time]" value="<?php echo htmlspecialchars($d["connection_time"]); ?>"
+							title="<?php echo htmlspecialchars($L["CONFIG.CONNECTION_TIME_INVALID"]); ?>">
+					</div>
 
 					<label><?php echo $L["CONFIG.UNIT_ID_REMAPPING"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.UNIT_ID_REMAPPING_HINT"]; ?></p>
-					<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][unit_id_remapping]" value="<?php echo htmlspecialchars(mbp_remap_to_text($d["unit_id_remapping"])); ?>">
+					<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][unit_id_remapping]" value="<?php echo htmlspecialchars(mbp_remap_to_text($d["unit_id_remapping"])); ?>"
+						pattern="<?php echo htmlspecialchars(MBP_REMAP_PATTERN); ?>" placeholder="1:0"
+						title="<?php echo htmlspecialchars($L["CONFIG.UNIT_ID_INVALID"]); ?>">
 				</div>
 			<?php endforeach; ?>
 		</div>
 
-		<button type="submit" data-role="button" data-inline="true" data-theme="b" data-icon="check"><?php echo $L["CONFIG.SAVE"]; ?></button>
+		<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="check"><?php echo $L["CONFIG.SAVE"]; ?></button>
 	</div>
 </form>
 
@@ -180,23 +231,49 @@ mbp_styles();
 
 		<label><?php echo $L["CONFIG.MODBUS_URL"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.MODBUS_URL_HINT"]; ?></p>
-		<input data-mini="true" type="text" name="devices[__IDX__][url]" value="" required>
+		<div class="mbp-addr">
+			<div class="mbp-addr-host">
+				<input data-mini="true" type="text" name="devices[__IDX__][host]" value="" required
+					pattern="<?php echo htmlspecialchars(MBP_HOST_PATTERN); ?>" maxlength="253"
+					title="<?php echo htmlspecialchars($L["CONFIG.HOST_INVALID"]); ?>" placeholder="192.168.1.10">
+				<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_HOST_SUB"]; ?></span>
+			</div>
+			<span class="mbp-addr-sep">:</span>
+			<div class="mbp-addr-port">
+				<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[__IDX__][device_port]" value="<?php echo MBP_DEFAULT_DEVICE_PORT; ?>" required
+					title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
+				<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_PORT_SUB"]; ?></span>
+			</div>
+		</div>
 
-		<label><?php echo $L["CONFIG.LISTEN_BIND"]; ?></label>
-		<p class="mbp-hint"><?php echo $L["CONFIG.LISTEN_BIND_HINT"]; ?></p>
-		<input data-mini="true" type="text" name="devices[__IDX__][bind]" value="" required>
+		<label><?php echo $L["CONFIG.LISTEN_PORT"]; ?></label>
+		<p class="mbp-hint"><?php echo $L["CONFIG.LISTEN_PORT_HINT"]; ?></p>
+		<div class="mbp-portonly">
+			<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[__IDX__][listen_port]" value="__NEXTPORT__" required
+				title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
+		</div>
 
 		<label><?php echo $L["CONFIG.TIMEOUT"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.TIMEOUT_HINT"]; ?></p>
-		<input data-mini="true" type="number" step="0.1" min="0" name="devices[__IDX__][timeout]" value="10">
+		<div class="mbp-portonly">
+			<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_TIMEOUT; ?>" required
+				name="devices[__IDX__][timeout]" value="10"
+				title="<?php echo htmlspecialchars($L["CONFIG.TIMEOUT_INVALID"]); ?>">
+		</div>
 
 		<label><?php echo $L["CONFIG.CONNECTION_TIME"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.CONNECTION_TIME_HINT"]; ?></p>
-		<input data-mini="true" type="number" step="0.1" min="0" name="devices[__IDX__][connection_time]" value="0">
+		<div class="mbp-portonly">
+			<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_CONNECTION_TIME; ?>" required
+				name="devices[__IDX__][connection_time]" value="0"
+				title="<?php echo htmlspecialchars($L["CONFIG.CONNECTION_TIME_INVALID"]); ?>">
+		</div>
 
 		<label><?php echo $L["CONFIG.UNIT_ID_REMAPPING"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.UNIT_ID_REMAPPING_HINT"]; ?></p>
-		<input data-mini="true" type="text" name="devices[__IDX__][unit_id_remapping]" value="">
+		<input data-mini="true" type="text" name="devices[__IDX__][unit_id_remapping]" value=""
+			pattern="<?php echo htmlspecialchars(MBP_REMAP_PATTERN); ?>" placeholder="1:0"
+			title="<?php echo htmlspecialchars($L["CONFIG.UNIT_ID_INVALID"]); ?>">
 	</div>
 </template>
 
@@ -205,8 +282,8 @@ mbp_styles();
 		<h3><?php echo $L["CONFIG.REMOVE_DEVICE"]; ?></h3>
 		<p id="mbp-confirm-text"><?php echo $L["CONFIG.REMOVE_DEVICE_CONFIRM"]; ?></p>
 		<div class="mbp-modal-btns">
-			<a href="#" class="ui-btn ui-btn-inline ui-corner-all" id="mbp-confirm-cancel"><?php echo $L["CONFIG.CANCEL"]; ?></a>
-			<a href="#" class="ui-btn ui-btn-inline ui-corner-all ui-btn-b" id="mbp-confirm-ok"><?php echo $L["CONFIG.REMOVE_DEVICE"]; ?></a>
+			<a href="#" class="ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-left ui-icon-back" id="mbp-confirm-cancel"><?php echo $L["CONFIG.CANCEL"]; ?></a>
+			<a href="#" class="ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-left ui-icon-delete" id="mbp-confirm-ok"><?php echo $L["CONFIG.REMOVE_DEVICE"]; ?></a>
 		</div>
 	</div>
 </div>
@@ -226,7 +303,9 @@ var mbpL = {
 	devconnected: <?php echo json_encode($L["STATUS.DEVICE_CONNECTED"]); ?>,
 	devdisconnected: <?php echo json_encode($L["STATUS.DEVICE_DISCONNECTED"]); ?>,
 	removeconfirm: <?php echo json_encode($L["CONFIG.REMOVE_DEVICE_CONFIRM"]); ?>,
-	device: <?php echo json_encode($L["CONFIG.DEVICE"]); ?>
+	device: <?php echo json_encode($L["CONFIG.DEVICE"]); ?>,
+	portlabel: <?php echo json_encode($L["STATUS.PORT"]); ?>,
+	portconflict: <?php echo json_encode($L["CONFIG.PORT_CONFLICT"]); ?>
 };
 
 function mbpEsc(s) {
@@ -256,7 +335,7 @@ function mbpPollStatus() {
 			html += "<div class='mbp-conn'>"
 				+ "<div class='mbp-conn-head'>"
 				+ mbpDot(d.reachable ? "mbp-dot-up" : "mbp-dot-down")
-				+ "<span class='mbp-conn-route'>" + mbpEsc(d.bind) + " &rarr; " + mbpEsc(d.url) + "</span>&nbsp;"
+				+ "<span class='mbp-conn-route'>" + mbpEsc(mbpL.portlabel) + " " + mbpEsc(d.listen_port) + " &rarr; " + mbpEsc(d.url) + "</span>&nbsp;"
 				+ mbpEsc(d.reachable ? mbpL.portopen : mbpL.portclosed)
 				+ "</div>"
 				+ "<div class='mbp-conn-meta'>"
@@ -282,9 +361,26 @@ function mbpRenumberDevices() {
 	}
 }
 
+function mbpListenPortFelder() {
+	return Array.prototype.slice.call(
+		document.querySelectorAll("#mbp-devices input[name$='[listen_port]']"));
+}
+
+// Nächste freie Portnummer vorschlagen, damit ein neues Gerät nicht auf einem schon
+// vergebenen Port landet.
+function mbpNaechsterPort() {
+	var hoechster = 0;
+	mbpListenPortFelder().forEach(function(f) {
+		var p = parseInt(f.value, 10);
+		if (!isNaN(p) && p > hoechster) { hoechster = p; }
+	});
+	return hoechster > 0 ? Math.min(hoechster + 1, 65535) : <?php echo MBP_DEFAULT_LISTEN_PORT; ?>;
+}
+
 function mbpAddDevice() {
 	var tpl = document.getElementById("mbp-device-template").innerHTML;
-	tpl = tpl.split("__IDX__").join(mbpNextIdx).split("__IDX_LABEL__").join(mbpNextIdx + 1);
+	tpl = tpl.split("__IDX__").join(mbpNextIdx).split("__IDX_LABEL__").join(mbpNextIdx + 1)
+		.split("__NEXTPORT__").join(mbpNaechsterPort());
 	var wrapper = document.createElement("div");
 	wrapper.innerHTML = tpl;
 	var node = wrapper.firstElementChild;
@@ -324,6 +420,27 @@ function mbpConfirmSchliessen() {
 	document.getElementById("mbp-confirm-overlay").classList.remove("mbp-modal-open");
 	mbpZuEntfernen = null;
 }
+
+// Doppelt vergebene Ports schon vor dem Absenden abfangen: modbus-proxy kann den
+// zweiten Port nicht öffnen und beendet sich dann komplett.
+document.getElementById("mbpform").addEventListener("submit", function(e) {
+	var gesehen = {};
+	var doppelt = null;
+	mbpListenPortFelder().forEach(function(f) {
+		f.setCustomValidity("");
+		var p = f.value.trim();
+		if (p === "") { return; }
+		if (gesehen[p]) {
+			doppelt = f;
+		}
+		gesehen[p] = true;
+	});
+	if (doppelt) {
+		e.preventDefault();
+		doppelt.setCustomValidity(mbpL.portconflict);
+		doppelt.reportValidity();
+	}
+});
 
 document.getElementById("mbp-confirm-ok").addEventListener("click", function(e) {
 	e.preventDefault();

@@ -31,7 +31,7 @@ fi
 chown -R loxberry:loxberry "$PCONFIG" "$PBIN" 2>/dev/null
 chmod 755 "$PBIN"/*.sh 2>/dev/null
 mkdir -p "$PLOG"
-chown loxberry:loxberry "$PLOG"
+chown -R loxberry:loxberry "$PLOG"
 
 echo "<INFO> Starte modbus-proxy-Dienst neu, damit die Konfiguration übernommen wird."
 "$PBIN/modbus-proxy-ctl.sh" restart

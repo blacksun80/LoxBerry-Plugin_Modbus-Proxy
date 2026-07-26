@@ -3,10 +3,16 @@
 # Wird von LoxBerry beim Systemstart als root ausgeführt (system/daemons/plugins/).
 # Startet den modbus-proxy-Dienst über das Steuerskript (läuft dort als User loxberry).
 
-log="$LBPLOG/modbus-proxy/daemonstart.log"
-mkdir -p "$LBPLOG/modbus-proxy"
+# Diese Datei heißt wie der Plugin-Ordner, den LoxBerry vergeben hat - der ist nicht
+# garantiert "modbus-proxy" (bei belegtem Namen hängt LoxBerry ein md5-Kürzel an).
+PLUGINDIR=$(basename "$0")
+
+log="$LBPLOG/$PLUGINDIR/daemonstart.log"
+mkdir -p "$LBPLOG/$PLUGINDIR"
 echo "$(date '+%Y-%m-%d %H:%M:%S') Boot-Start ausgelöst" >>"$log"
 
-"$LBPBIN/modbus-proxy/modbus-proxy-ctl.sh" start >>"$log" 2>&1
+# Das Steuerskript zieht die Besitzrechte im Log-Ordner selbst gerade, auch für
+# die hier als root angelegte daemonstart.log.
+"$LBPBIN/$PLUGINDIR/modbus-proxy-ctl.sh" start >>"$log" 2>&1
 
 exit 0
