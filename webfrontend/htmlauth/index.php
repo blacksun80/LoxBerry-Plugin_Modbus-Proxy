@@ -176,7 +176,8 @@ mbp_styles();
 						</div>
 						<span class="mbp-addr-sep">:</span>
 						<div class="mbp-addr-port">
-							<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[<?php echo $i; ?>][device_port]" value="<?php echo (int)$d["device_port"]; ?>" required
+							<input data-mini="true" type="text" inputmode="numeric" pattern="<?php echo htmlspecialchars(MBP_PORT_PATTERN); ?>"
+								data-min="1" data-max="65535" name="devices[<?php echo $i; ?>][device_port]" value="<?php echo (int)$d["device_port"]; ?>" required
 								title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
 							<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_PORT_SUB"]; ?></span>
 						</div>
@@ -185,14 +186,16 @@ mbp_styles();
 					<label><?php echo $L["CONFIG.LISTEN_PORT"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.LISTEN_PORT_HINT"]; ?></p>
 					<div class="mbp-portonly">
-						<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[<?php echo $i; ?>][listen_port]" value="<?php echo (int)$d["listen_port"]; ?>" required
+						<input data-mini="true" type="text" inputmode="numeric" pattern="<?php echo htmlspecialchars(MBP_PORT_PATTERN); ?>"
+							data-min="1" data-max="65535" name="devices[<?php echo $i; ?>][listen_port]" value="<?php echo (int)$d["listen_port"]; ?>" required
 							title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
 					</div>
 
 					<label><?php echo $L["CONFIG.TIMEOUT"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.TIMEOUT_HINT"]; ?></p>
 					<div class="mbp-portonly">
-						<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_TIMEOUT; ?>" required
+						<input data-mini="true" type="text" inputmode="decimal" pattern="<?php echo htmlspecialchars(MBP_SEKUNDEN_PATTERN); ?>"
+							data-min="0" data-max="<?php echo MBP_MAX_TIMEOUT; ?>" required
 							name="devices[<?php echo $i; ?>][timeout]" value="<?php echo htmlspecialchars($d["timeout"]); ?>"
 							title="<?php echo htmlspecialchars($L["CONFIG.TIMEOUT_INVALID"]); ?>">
 					</div>
@@ -200,7 +203,8 @@ mbp_styles();
 					<label><?php echo $L["CONFIG.CONNECTION_TIME"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.CONNECTION_TIME_HINT"]; ?></p>
 					<div class="mbp-portonly">
-						<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_CONNECTION_TIME; ?>" required
+						<input data-mini="true" type="text" inputmode="decimal" pattern="<?php echo htmlspecialchars(MBP_SEKUNDEN_PATTERN); ?>"
+							data-min="0" data-max="<?php echo MBP_MAX_CONNECTION_TIME; ?>" required
 							name="devices[<?php echo $i; ?>][connection_time]" value="<?php echo htmlspecialchars($d["connection_time"]); ?>"
 							title="<?php echo htmlspecialchars($L["CONFIG.CONNECTION_TIME_INVALID"]); ?>">
 					</div>
@@ -238,7 +242,8 @@ mbp_styles();
 			</div>
 			<span class="mbp-addr-sep">:</span>
 			<div class="mbp-addr-port">
-				<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[__IDX__][device_port]" value="<?php echo MBP_DEFAULT_DEVICE_PORT; ?>" required
+				<input data-mini="true" type="text" inputmode="numeric" pattern="<?php echo htmlspecialchars(MBP_PORT_PATTERN); ?>"
+					data-min="1" data-max="65535" name="devices[__IDX__][device_port]" value="<?php echo MBP_DEFAULT_DEVICE_PORT; ?>" required
 					title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
 				<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_PORT_SUB"]; ?></span>
 			</div>
@@ -247,14 +252,16 @@ mbp_styles();
 		<label><?php echo $L["CONFIG.LISTEN_PORT"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.LISTEN_PORT_HINT"]; ?></p>
 		<div class="mbp-portonly">
-			<input data-mini="true" type="number" min="1" max="65535" step="1" name="devices[__IDX__][listen_port]" value="__NEXTPORT__" required
+			<input data-mini="true" type="text" inputmode="numeric" pattern="<?php echo htmlspecialchars(MBP_PORT_PATTERN); ?>"
+				data-min="1" data-max="65535" name="devices[__IDX__][listen_port]" value="__NEXTPORT__" required
 				title="<?php echo htmlspecialchars($L["CONFIG.PORT_INVALID"]); ?>">
 		</div>
 
 		<label><?php echo $L["CONFIG.TIMEOUT"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.TIMEOUT_HINT"]; ?></p>
 		<div class="mbp-portonly">
-			<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_TIMEOUT; ?>" required
+			<input data-mini="true" type="text" inputmode="decimal" pattern="<?php echo htmlspecialchars(MBP_SEKUNDEN_PATTERN); ?>"
+				data-min="0" data-max="<?php echo MBP_MAX_TIMEOUT; ?>" required
 				name="devices[__IDX__][timeout]" value="10"
 				title="<?php echo htmlspecialchars($L["CONFIG.TIMEOUT_INVALID"]); ?>">
 		</div>
@@ -262,7 +269,8 @@ mbp_styles();
 		<label><?php echo $L["CONFIG.CONNECTION_TIME"]; ?></label>
 		<p class="mbp-hint"><?php echo $L["CONFIG.CONNECTION_TIME_HINT"]; ?></p>
 		<div class="mbp-portonly">
-			<input data-mini="true" type="number" step="0.1" min="0" max="<?php echo MBP_MAX_CONNECTION_TIME; ?>" required
+			<input data-mini="true" type="text" inputmode="decimal" pattern="<?php echo htmlspecialchars(MBP_SEKUNDEN_PATTERN); ?>"
+				data-min="0" data-max="<?php echo MBP_MAX_CONNECTION_TIME; ?>" required
 				name="devices[__IDX__][connection_time]" value="0"
 				title="<?php echo htmlspecialchars($L["CONFIG.CONNECTION_TIME_INVALID"]); ?>">
 		</div>
@@ -441,13 +449,23 @@ function mbpConfirmSchliessen() {
 // title-Attribut des Feldes. Ohne das zeigt der Browser den eigenen Text nur bei
 // Musterverletzungen, bei Zahlenfeldern dagegen seine knappe Standardmeldung.
 // Die Prüfung läuft über feld.validity und nicht über checkValidity(), da letzteres
-// selbst ein invalid-Ereignis auslöst und sich damit endlos aufrufen würde.
+// selbst ein invalid-Ereignis auslöst und sich damit endlos aufrufen würde. Felder mit
+// data-min/data-max werden zusätzlich gegen ihren Zahlenbereich geprüft.
 function mbpMeldungSetzen(feld) {
 	if (!feld.title) {
 		return;
 	}
 	feld.setCustomValidity("");
-	if (!feld.validity.valid) {
+	var gueltig = feld.validity.valid;
+	if (gueltig && feld.getAttribute("data-min") !== null && feld.value.trim() !== "") {
+		var zahl = parseFloat(feld.value.trim().replace(",", "."));
+		var min = parseFloat(feld.getAttribute("data-min"));
+		var max = parseFloat(feld.getAttribute("data-max"));
+		if (isNaN(zahl) || zahl < min || zahl > max) {
+			gueltig = false;
+		}
+	}
+	if (!gueltig) {
 		feld.setCustomValidity(feld.title);
 	}
 }

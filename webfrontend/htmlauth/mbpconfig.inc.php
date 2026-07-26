@@ -124,6 +124,12 @@ define("MBP_HOST_PATTERN", "(" . MBP_IPV4_PATTERN . "|" . MBP_HOSTNAME_PATTERN .
 // ein HTML-pattern greift bei leeren Feldern nicht.
 define("MBP_REMAP_PATTERN", '\s*\d{1,3}\s*:\s*\d{1,3}\s*(,\s*\d{1,3}\s*:\s*\d{1,3}\s*)*');
 
+// Muster der Zahlenfelder. Sie sind Textfelder mit Muster statt type="number", weil
+// Browser bei type="number" eine Eingabe wie "3443s" verwerfen, ohne einen Fehler zu
+// melden - das Feld gilt dann als gültig und der Wert kommt leer beim Server an.
+define("MBP_PORT_PATTERN", '[0-9]{1,5}');
+define("MBP_SEKUNDEN_PATTERN", '[0-9]+([.,][0-9]+)?');
+
 // Obergrenzen der Zahlenfelder in der GUI.
 define("MBP_MAX_TIMEOUT", 3600);
 define("MBP_MAX_CONNECTION_TIME", 600);
@@ -174,7 +180,9 @@ function mbp_valid_port($p) {
 }
 
 // Zahl innerhalb der Grenzen? Nicht-Zahlen und Werte ausserhalb liefern den Ersatzwert.
+// Ein Komma wird als Dezimaltrennzeichen akzeptiert.
 function mbp_clamp_number($wert, $min, $max, $ersatz) {
+	$wert = str_replace(",", ".", trim((string)$wert));
 	if (!is_numeric($wert)) {
 		return $ersatz;
 	}
