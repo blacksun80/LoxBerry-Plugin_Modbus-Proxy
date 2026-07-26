@@ -11,18 +11,22 @@ ohne \\ wird beim Rendern zu einem Leerzeichen zusammengezogen, siehe DokuWiki-S
 Innerhalb von Listenpunkten wird eine umgebrochene Fortsetzungszeile dagegen nicht automatisch
 angehängt - dort steht am Ende der ersten Zeile bewusst "\\", um den gewünschten Zeilenumbruch
 innerhalb desselben Listenpunkts zu erzwingen (statt eines neuen Listenpunkts oder eines Fehlers).
--->
 
-^ Plugin-Daten ||
-^ Autor | Michael Kaufmann |
-^ Logo | {{plugins:modbus-proxy:icon_256.png?128}} |
-^ Status | BETA |
-^ Version | 1.0.0 |
-^ Min. LB Version | 3.0.0 |
-^ Release Download | [[https://github.com/blacksun80/LoxBerry-Plugin_Modbus-Proxy/archive/refs/tags/Modbus-Proxy-V1.0.0.zip|Modbus-Proxy-V1.0.0.zip]] |
-^ Beschreibung | Stellt eine grafische Oberfläche für den Python-Dienst modbus-proxy bereit: mehrere Modbus-TCP-Clients (z.B. mehrere Loxone Miniserver) können sich einen einzelnen Modbus-TCP-Anschluss teilen. |
-^ Sprachen | DE, EN |
-^ Diskussion | [[https://www.loxforum.com/forum/projektforen/loxberry/plugins/488908-modbus-proxy-plugin-zur-einfachen-gemeinsamen-nutzung-eines-modbus-tcp-ger%C3%A4ts|LoxForum-Beitrag]] |
+Die Box "Plugin-Daten" ganz oben auf der Seite ist KEIN Wikitext, sondern ein automatisch
+erscheinendes Formular (DokuWiki-"struct"-Plugin), das im plugins:-Namespace von selbst auftaucht
+- dafür also NICHTS aus dieser Datei einfügen, sondern direkt im Formular ausfüllen:
+  Autor: Michael Kaufmann
+  Logo: icon_256.png (aus icons/ dieses Repos hochladen)
+  Status: BETA
+  Version: 1.0.0
+  Min. LB Version: 3.0.0
+  Release Download: https://github.com/blacksun80/LoxBerry-Plugin_Modbus-Proxy/archive/refs/tags/Modbus-Proxy-V1.0.0.zip
+  Beschreibung: Stellt eine grafische Oberfläche für den Python-Dienst modbus-proxy bereit: mehrere
+    Modbus-TCP-Clients (z.B. mehrere Loxone Miniserver) können sich einen einzelnen
+    Modbus-TCP-Anschluss teilen.
+  Sprachen: DE, EN
+  Diskussion: https://www.loxforum.com/forum/projektforen/loxberry/plugins/488908-modbus-proxy-plugin-zur-einfachen-gemeinsamen-nutzung-eines-modbus-tcp-ger%C3%A4ts
+-->
 
 ====== Modbus-Proxy ======
 
