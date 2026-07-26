@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version (z.B. 0.2.0 oder 0.1.99)"
+        description: "Version, zweistellig (z.B. 1.1 oder 2.0)"
         required: true
+        default: "1.0"
       channel:
         description: "Kanal"
         required: true
@@ -29,6 +30,12 @@ jobs:
           V="${{ inputs.version }}"
           CH="${{ inputs.channel }}"
           REPO="${{ github.repository }}"
+
+          if ! echo "$V" | grep -qE '^[0-9]+\.[0-9]+$'; then
+            echo "Version muss zweistellig sein (z.B. 1.1 oder 2.0), angegeben war: $V" >&2
+            exit 1
+          fi
+
           TAG="Modbus-Proxy-V$V"
           ZIP="https://github.com/$REPO/archive/refs/tags/$TAG.zip"
           INFO="https://github.com/$REPO/releases/tag/$TAG"
