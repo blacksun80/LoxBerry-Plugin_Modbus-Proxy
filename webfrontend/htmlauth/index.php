@@ -152,7 +152,7 @@ mbp_styles();
 	</div>
 </div>
 
-<form action="index.php" method="post" id="mbpform">
+<form action="index.php" method="post" id="mbpform" novalidate>
 	<input type="hidden" name="action" value="save">
 	<div class="mbp-box">
 		<div id="mbp-devices">
@@ -464,23 +464,30 @@ function mbpMeldungenAnhaengen(bereich) {
 
 mbpMeldungenAnhaengen(document.getElementById("mbpform"));
 
-// Fängt doppelt vergebene Ports vor dem Absenden ab.
+// Prüft das Formular selbst, statt es dem Browser zu überlassen (das Formular trägt
+// deshalb novalidate). Nur so stehen die eigenen Meldungen schon fest, bevor die
+// Hinweisblase aufgeht - der Browser zeigt den title-Text sonst ausschliesslich bei
+// Musterverletzungen an, nicht bei über- oder unterschrittenen Zahlenbereichen.
 document.getElementById("mbpform").addEventListener("submit", function(e) {
+	var felder = this.querySelectorAll("input[title]");
+	for (var i = 0; i < felder.length; i++) {
+		mbpMeldungSetzen(felder[i]);
+	}
+
+	// Doppelt vergebene Ports; überschreibt die Meldung des betroffenen Feldes.
 	var gesehen = {};
-	var doppelt = null;
 	mbpListenPortFelder().forEach(function(f) {
-		f.setCustomValidity("");
 		var p = f.value.trim();
 		if (p === "") { return; }
 		if (gesehen[p]) {
-			doppelt = f;
+			f.setCustomValidity(mbpL.portconflict);
 		}
 		gesehen[p] = true;
 	});
-	if (doppelt) {
+
+	if (!this.checkValidity()) {
 		e.preventDefault();
-		doppelt.setCustomValidity(mbpL.portconflict);
-		doppelt.reportValidity();
+		this.reportValidity();
 	}
 });
 
