@@ -4,25 +4,42 @@
 # Wird sowohl vom Boot-Daemon (system/daemons/plugins/modbus-proxy, als root)
 # als auch von der Plugin-GUI (als User loxberry) aufgerufen.
 #
-# Aufruf: modbus-proxy-ctl.sh {start|stop|restart|status}
+# Aufruf: modbus-proxy-ctl.sh {start|stop|restart|status|trimlog}
 
 set -u
 
 BINARY=/usr/local/bin/modbus-proxy
 RUNUSER=loxberry
 
-# Der Plugin-Ordner ist nicht garantiert "modbus-proxy": LoxBerry hängt bei einem
-# bereits belegten Namen die ersten drei Zeichen des md5-Hashes an. Dieses Skript liegt
-# immer unter $LBPBIN/<Ordner>/, der Ordnername steht also im eigenen Pfad.
-PLUGINDIR=$(basename "$(dirname "$(readlink -f "$0")")")
-
-CONFIGFILE="$LBPCONFIG/$PLUGINDIR/modbus-proxy.yml"
-LOGDIR="$LBPLOG/$PLUGINDIR"
+CONFIGFILE="$LBPCONFIG/modbus-proxy/modbus-proxy.yml"
+LOGDIR="$LBPLOG/modbus-proxy"
 PIDFILE="$LOGDIR/modbus-proxy.pid"
-LOGFILE="$LOGDIR/daemon.log"
+
+# Eine einzige Logdatei für alles: Start-/Stopp-Meldungen dieses Skripts, die Ausgabe
+# des Dienstes und Startfehler (Python-Tracebacks). Der Dienst schreibt deshalb nur
+# nach stderr, siehe logging-Block in der modbus-proxy.yml.
+LOGFILE="$LOGDIR/modbus-proxy.log"
+
+# Obergrenze der Logdatei; beim Überschreiten bleiben die letzten KEEPBYTES erhalten.
+# Das Log liegt unter $LBPLOG, das LoxBerry auf Raspberry-Pi-Systemen in eine RAM-Disk
+# einhängt (siehe sbin/createtmpfsfoldersinit.sh) - es darf also nicht unbegrenzt wachsen.
+MAXBYTES=1048576
+KEEPBYTES=524288
 
 log() {
 	echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >>"$LOGFILE"
+}
+
+trim_log() {
+	# Kürzt die Logdatei auf die letzten KEEPBYTES. Bewusst "in place" (Umleitung mit >
+	# auf dieselbe Datei) statt Umbenennen: der laufende Dienst hält die Datei geöffnet
+	# und würde nach einem Umbenennen weiter in die alte, unsichtbare Datei schreiben.
+	[ -f "$LOGFILE" ] || return 0
+	SIZE=$(stat -c %s "$LOGFILE" 2>/dev/null || echo 0)
+	[ "$SIZE" -le "$MAXBYTES" ] && return 0
+	REST=$(tail -c "$KEEPBYTES" "$LOGFILE")
+	printf '%s\n' "$REST" > "$LOGFILE"
+	log "Logdatei gekürzt (war $SIZE Bytes)"
 }
 
 as_runuser() {
@@ -72,7 +89,9 @@ do_start() {
 	# Wichtig: "cd X && nohup CMD &" würde die gesamte &&-Kette als Subshell
 	# hintergrunden - "$!" wäre dann die PID der Subshell, nicht des
 	# tatsächlichen Prozesses. Deshalb hier ein einzelner Befehl ohne "&&".
-	as_runuser "nohup $BINARY --config-file $CONFIGFILE >>$LOGFILE 2>&1 & echo \$! > $PIDFILE"
+	# PYTHONUNBUFFERED sorgt dafür, dass die Meldungen sofort in der Logdatei
+	# stehen und nicht erst, wenn Python seinen Ausgabepuffer leert.
+	as_runuser "PYTHONUNBUFFERED=1 nohup $BINARY --config-file $CONFIGFILE >>$LOGFILE 2>&1 & echo \$! > $PIDFILE"
 	sleep 1
 	if is_running; then
 		log "Gestartet mit PID $(cat "$PIDFILE")"
@@ -101,6 +120,7 @@ do_stop() {
 case "${1:-}" in
 	start)
 		ensure_logdir
+		trim_log
 		do_start
 		;;
 	stop)
@@ -109,6 +129,7 @@ case "${1:-}" in
 		;;
 	restart)
 		ensure_logdir
+		trim_log
 		do_stop
 		sleep 1
 		do_start
@@ -122,8 +143,12 @@ case "${1:-}" in
 			exit 3
 		fi
 		;;
+	trimlog)
+		ensure_logdir
+		trim_log
+		;;
 	*)
-		echo "Verwendung: $0 {start|stop|restart|status}"
+		echo "Verwendung: $0 {start|stop|restart|status|trimlog}"
 		exit 2
 		;;
 esac

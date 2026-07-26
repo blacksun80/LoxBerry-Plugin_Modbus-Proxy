@@ -9,7 +9,6 @@ $L = LBSystem::readlanguage("language.ini");
 $configfile = "$lbpconfigdir/modbus-proxy.yml";
 $ctlscript = "$lbpbindir/modbus-proxy-ctl.sh";
 $logfile = "$lbplogdir/modbus-proxy.log";
-$daemonlog = "$lbplogdir/daemon.log";
 
 $message = "";
 $messagetype = "";
@@ -19,7 +18,7 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["action"] ?? "") ==
 	if (isset($_POST["loglevel"]) && in_array($_POST["loglevel"], MBP_LOGLEVELS)) {
 		$cfg["loglevel"] = $_POST["loglevel"];
 	}
-	$yaml = mbp_config_to_yaml($cfg, $logfile);
+	$yaml = mbp_config_to_yaml($cfg);
 	if (file_put_contents($configfile, $yaml) !== false) {
 		exec(escapeshellarg($ctlscript) . " restart 2>&1");
 		$message = $L["LOG.SAVED_OK"];
@@ -33,7 +32,6 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["action"] ?? "") ==
 $cfg = mbp_read_config($configfile);
 
 $loginhalt = mbp_tail($logfile, MBP_LOG_LINES);
-$daemoninhalt = mbp_tail($daemonlog, MBP_DAEMONLOG_LINES);
 // Pfad relativ zum LoxBerry-Log-Verzeichnis, so erwartet ihn der System-Logviewer.
 $logrelativ = "plugins/" . basename($lbplogdir) . "/" . basename($logfile);
 
@@ -50,18 +48,15 @@ mbp_styles();
 <p class="wide"><?php echo $L["LOG.LEVEL_HEAD"]; ?></p>
 <div class="mbp-box">
 	<p class="mbp-hint"><?php echo $L["LOG.LEVEL_HINT"]; ?></p>
-	<form action="log.php" method="post">
+	<form action="log.php" method="post" id="mbploglevelform">
 		<input type="hidden" name="action" value="saveloglevel">
 		<div class="mbp-field">
 			<label for="mbp-loglevel"><?php echo $L["CONFIG.LOG_LEVEL"]; ?></label>
-			<select id="mbp-loglevel" name="loglevel" data-mini="true">
+			<select id="mbp-loglevel" name="loglevel" data-mini="true" onchange="this.form.submit();">
 				<?php foreach (MBP_LOGLEVELS as $lvl): ?>
 					<option value="<?php echo $lvl; ?>" <?php echo ($cfg["loglevel"] === $lvl) ? "selected" : ""; ?>><?php echo $lvl; ?></option>
 				<?php endforeach; ?>
 			</select>
-		</div>
-		<div class="mbp-btnrow">
-			<button type="submit" data-role="button" data-inline="true" data-mini="true" data-icon="check"><?php echo $L["CONFIG.SAVE"]; ?></button>
 		</div>
 	</form>
 </div>
@@ -73,6 +68,7 @@ mbp_styles();
 	</div>
 </div>
 <div class="mbp-box">
+	<p class="mbp-hint"><?php echo $L["LOG.HINT"]; ?></p>
 	<?php if ($loginhalt === null): ?>
 		<p><?php echo $L["LOG.NO_LOGFILE"]; ?></p>
 	<?php elseif (trim($loginhalt) === ""): ?>
@@ -80,21 +76,6 @@ mbp_styles();
 	<?php else: ?>
 		<pre class="mbp-logview" id="mbp-logview"><?php echo htmlspecialchars($loginhalt); ?></pre>
 		<p class="mbp-loginfo"><?php echo $L["LOG.TAIL_INFO"]; ?> &mdash; <?php echo htmlspecialchars($logfile); ?></p>
-	<?php endif; ?>
-	<div class="mbp-btnrow">
-		<button type="button" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" onclick="mbpLogsLaden();"><?php echo $L["LOG.REFRESH"]; ?></button>
-		<span class="mbp-autoinfo"><?php echo $L["LOG.AUTO_REFRESH"]; ?></span>
-	</div>
-</div>
-
-<p class="wide"><?php echo $L["LOG.DAEMON_HEAD"]; ?></p>
-<div class="mbp-box">
-	<p class="mbp-hint"><?php echo $L["LOG.DAEMON_HINT"]; ?></p>
-	<?php if ($daemoninhalt === null || trim($daemoninhalt) === ""): ?>
-		<p><?php echo $L["LOG.EMPTY"]; ?></p>
-	<?php else: ?>
-		<pre class="mbp-logview" id="mbp-daemonview"><?php echo htmlspecialchars($daemoninhalt); ?></pre>
-		<p class="mbp-loginfo"><?php echo htmlspecialchars($daemonlog); ?></p>
 	<?php endif; ?>
 	<div class="mbp-btnrow">
 		<button type="button" data-role="button" data-inline="true" data-mini="true" data-icon="refresh" onclick="mbpLogsLaden();"><?php echo $L["LOG.REFRESH"]; ?></button>
@@ -115,12 +96,12 @@ function mbpAnsEnde(el) {
 }
 
 // Ans Ende der Logausgabe springen, dort stehen die neuesten Meldungen.
-["mbp-logview", "mbp-daemonview"].forEach(function(id) {
-	var v = document.getElementById(id);
+(function() {
+	var v = document.getElementById("mbp-logview");
 	if (v) {
 		mbpAnsEnde(v);
 	}
-});
+})();
 
 // Neuen Logtext einsetzen. Wer gerade weiter oben liest, wird nicht ans Ende gerissen.
 function mbpLogSetzen(id, text) {
@@ -141,7 +122,6 @@ function mbpLogSetzen(id, text) {
 function mbpLogsLaden() {
 	fetch("logdata.php").then(function(r) { return r.json(); }).then(function(d) {
 		mbpLogSetzen("mbp-logview", d.log);
-		mbpLogSetzen("mbp-daemonview", d.daemon);
 	}).catch(function() {});
 }
 

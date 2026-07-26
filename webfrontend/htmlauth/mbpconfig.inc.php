@@ -71,6 +71,15 @@ function mbp_styles() {
 .mbp-addr-sep { font-weight: bold; color: #888; line-height: 2.6; }
 .mbp-addr .ui-input-text { margin: 0; }
 .mbp-subhint { display: block; font-size: 0.78em; color: #999; margin: 3px 0 0 2px; }
+
+/* Beispielwerte deutlich blasser als echte Eingaben, damit sie nicht mit einem
+   bereits eingetragenen Wert verwechselt werden. */
+.ui-input-text input::placeholder,
+.mbp-device input::placeholder { color: #c4c4c4; font-style: italic; opacity: 1; }
+.ui-input-text input::-webkit-input-placeholder,
+.mbp-device input::-webkit-input-placeholder { color: #c4c4c4; font-style: italic; }
+.ui-input-text input::-moz-placeholder,
+.mbp-device input::-moz-placeholder { color: #c4c4c4; font-style: italic; opacity: 1; }
 .mbp-portonly { max-width: 130px; margin-bottom: 14px; }
 .mbp-portonly .ui-input-text { margin: 0; }
 
@@ -124,9 +133,8 @@ define("MBP_MAX_CONNECTION_TIME", 600);
 // Modbus-Unit-IDs sind ein einzelnes Byte.
 define("MBP_MAX_UNIT_ID", 255);
 
-// Anzahl Zeilen, die die Log-Seite je Datei anzeigt.
-define("MBP_LOG_LINES", 120);
-define("MBP_DAEMONLOG_LINES", 60);
+// Anzahl Zeilen, die die Log-Seite anzeigt.
+define("MBP_LOG_LINES", 150);
 
 // Abstand der automatischen Aktualisierung in Millisekunden.
 define("MBP_POLL_MS", 5000);
@@ -190,7 +198,7 @@ function mbp_yaml_dq($s) {
 	return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $s) . '"';
 }
 
-function mbp_config_to_yaml($cfg, $logfile) {
+function mbp_config_to_yaml($cfg) {
 	$loglevel = in_array($cfg["loglevel"], MBP_LOGLEVELS) ? $cfg["loglevel"] : "INFO";
 
 	$lines = [];
@@ -213,6 +221,9 @@ function mbp_config_to_yaml($cfg, $logfile) {
 			$lines[] = "  unit_id_remapping: {" . implode(", ", $pairs) . "}";
 		}
 	}
+	// Der Dienst schreibt bewusst nur nach stderr und in keine eigene Datei: das
+	// Steuerskript leitet seine Ausgabe in die gemeinsame Logdatei um, in der auch
+	// die Start-/Stopp-Meldungen und Startfehler stehen. So gibt es nur ein Log.
 	$lines[] = "logging:";
 	$lines[] = "  version: 1";
 	$lines[] = "  formatters:";
@@ -223,16 +234,8 @@ function mbp_config_to_yaml($cfg, $logfile) {
 	$lines[] = "      class: logging.StreamHandler";
 	$lines[] = "      level: " . $loglevel;
 	$lines[] = "      formatter: standard";
-	$lines[] = "    info_file_handler:";
-	$lines[] = "      class: logging.handlers.RotatingFileHandler";
-	$lines[] = "      level: " . $loglevel;
-	$lines[] = "      formatter: standard";
-	$lines[] = "      filename: " . mbp_yaml_dq($logfile);
-	$lines[] = "      maxBytes: 204800";
-	$lines[] = "      backupCount: 1";
-	$lines[] = "      encoding: utf8";
 	$lines[] = "  root:";
-	$lines[] = "    handlers: ['console', 'info_file_handler']";
+	$lines[] = "    handlers: ['console']";
 	$lines[] = "    level: " . $loglevel;
 	return implode("\n", $lines) . "\n";
 }
@@ -372,14 +375,20 @@ function mbp_config_from_post($post, $loglevel_fallback = "INFO") {
 	return $cfg;
 }
 
-function mbp_port_reachable($port, $timeout = 0.5) {
-	if ($port === null) {
+// Lauscht auf diesem Port ein Dienst? Bewusst über die Socket-Tabelle statt über einen
+// echten Verbindungsversuch: jede Testverbindung würde modbus-proxy als Client-Zugriff
+// werten und vier Zeilen ins Log schreiben - bei einer alle paar Sekunden aktualisierten
+// Statusseite läuft die Logdatei damit in kurzer Zeit voll.
+function mbp_port_listening($port) {
+	if (!mbp_valid_port($port)) {
 		return false;
 	}
-	$fp = @fsockopen("127.0.0.1", $port, $errno, $errstr, $timeout);
-	if ($fp) {
-		fclose($fp);
-		return true;
+	$out = [];
+	exec("ss -ltn " . escapeshellarg("( sport = :" . (int)$port . " )") . " 2>/dev/null", $out);
+	foreach ($out as $line) {
+		if (preg_match('/^\s*LISTEN\s/', $line)) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -394,15 +403,14 @@ function mbp_tail($pfad, $zeilen = 120) {
 	return implode("\n", $out);
 }
 
-// Sucht im Startprotokoll die letzte aussagekräftige Fehlerzeile. modbus-proxy schreibt
-// Startfehler (z.B. belegter Port) nur nach stderr, nicht in seine eigene Logdatei -
-// stderr landet über das Steuerskript in daemon.log.
-function mbp_start_error($daemonlog, $zeilen = 40) {
-	if (!file_exists($daemonlog) || !is_readable($daemonlog)) {
+// Sucht im Log die letzte aussagekräftige Fehlerzeile. Startfehler (z.B. ein belegter
+// Port) erscheinen als Python-Traceback, nicht als formatierte Log-Meldung.
+function mbp_start_error($logfile, $zeilen = 40) {
+	if (!file_exists($logfile) || !is_readable($logfile)) {
 		return null;
 	}
 	$out = [];
-	exec("tail -n " . (int)$zeilen . " " . escapeshellarg($daemonlog) . " 2>/dev/null", $out);
+	exec("tail -n " . (int)$zeilen . " " . escapeshellarg($logfile) . " 2>/dev/null", $out);
 	$treffer = null;
 	foreach ($out as $zeile) {
 		if (preg_match('/^\s*(OSError|[A-Za-z_.]*(Error|Exception)):\s*(.+)$/', trim($zeile), $m)) {

@@ -9,20 +9,19 @@ $L = LBSystem::readlanguage("language.ini");
 $configfile = "$lbpconfigdir/modbus-proxy.yml";
 $ctlscript = "$lbpbindir/modbus-proxy-ctl.sh";
 $logfile = "$lbplogdir/modbus-proxy.log";
-$daemonlog = "$lbplogdir/daemon.log";
 
 $message = "";
 $messagetype = "";
 
 // Nach start/restart prüfen, ob der Dienst wirklich läuft. Tut er es nicht, steht der
-// Grund (z.B. belegter Port) nur im Startprotokoll - der wird hier mit angezeigt,
+// Grund (z.B. ein belegter Port) nur als Traceback im Log - der wird hier mit angezeigt,
 // sonst bliebe für den Nutzer nur ein unerklärtes "Dienst gestoppt".
-function mbp_startergebnis($ctlscript, $daemonlog, $L) {
+function mbp_startergebnis($ctlscript, $logfile, $L) {
 	$status = mbp_daemon_status($ctlscript);
 	if ($status["running"]) {
 		return null;
 	}
-	$fehler = mbp_start_error($daemonlog);
+	$fehler = mbp_start_error($logfile);
 	return $fehler === null
 		? $L["STATUS.START_FAILED"]
 		: $L["STATUS.START_FAILED"] . " " . $fehler;
@@ -52,10 +51,10 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST") {
 			$message = $L["CONFIG.VALIDATION_ERROR"];
 			$messagetype = "error";
 		} else {
-			$yaml = mbp_config_to_yaml($cfg, $logfile);
+			$yaml = mbp_config_to_yaml($cfg);
 			if (file_put_contents($configfile, $yaml) !== false) {
 				exec(escapeshellarg($ctlscript) . " restart 2>&1");
-				$fehler = mbp_startergebnis($ctlscript, $daemonlog, $L);
+				$fehler = mbp_startergebnis($ctlscript, $logfile, $L);
 				$message = $fehler === null ? $L["CONFIG.SAVED_OK"] : $L["CONFIG.SAVED_BUT_FAILED"] . " " . $fehler;
 				$messagetype = $fehler === null ? "ok" : "error";
 			} else {
@@ -69,7 +68,7 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST") {
 			$message = $L["STATUS.ACTION_OK"];
 			$messagetype = "ok";
 		} else {
-			$fehler = mbp_startergebnis($ctlscript, $daemonlog, $L);
+			$fehler = mbp_startergebnis($ctlscript, $logfile, $L);
 			$message = $fehler === null ? $L["STATUS.ACTION_OK"] : $fehler;
 			$messagetype = $fehler === null ? "ok" : "error";
 		}
@@ -110,7 +109,7 @@ mbp_styles();
 	<div id="mbp-status-devices">
 	<?php foreach ($cfg["devices"] as $d):
 		$port = (int)$d["listen_port"];
-		$up = $status["running"] && mbp_port_reachable($port);
+		$up = $status["running"] && mbp_port_listening($port);
 		$tr = mbp_device_traffic($d);
 		$rxact = mbp_is_active($tr["client"]["last_rx_ms"]);
 		$txact = mbp_is_active($tr["client"]["last_tx_ms"]);
@@ -173,7 +172,7 @@ mbp_styles();
 						<div class="mbp-addr-host">
 							<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][host]" value="<?php echo htmlspecialchars($d["host"]); ?>" required
 								pattern="<?php echo htmlspecialchars(MBP_HOST_PATTERN); ?>" maxlength="253"
-								title="<?php echo htmlspecialchars($L["CONFIG.HOST_INVALID"]); ?>" placeholder="192.168.1.10">
+								title="<?php echo htmlspecialchars($L["CONFIG.HOST_INVALID"]); ?>" placeholder="<?php echo htmlspecialchars($L["CONFIG.HOST_PLACEHOLDER"]); ?>">
 							<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_HOST_SUB"]; ?></span>
 						</div>
 						<span class="mbp-addr-sep">:</span>
@@ -210,7 +209,7 @@ mbp_styles();
 					<label><?php echo $L["CONFIG.UNIT_ID_REMAPPING"]; ?></label>
 					<p class="mbp-hint"><?php echo $L["CONFIG.UNIT_ID_REMAPPING_HINT"]; ?></p>
 					<input data-mini="true" type="text" name="devices[<?php echo $i; ?>][unit_id_remapping]" value="<?php echo htmlspecialchars(mbp_remap_to_text($d["unit_id_remapping"])); ?>"
-						pattern="<?php echo htmlspecialchars(MBP_REMAP_PATTERN); ?>" placeholder="1:0"
+						pattern="<?php echo htmlspecialchars(MBP_REMAP_PATTERN); ?>" placeholder="<?php echo htmlspecialchars($L["CONFIG.UNIT_ID_PLACEHOLDER"]); ?>"
 						title="<?php echo htmlspecialchars($L["CONFIG.UNIT_ID_INVALID"]); ?>">
 				</div>
 			<?php endforeach; ?>
@@ -235,7 +234,7 @@ mbp_styles();
 			<div class="mbp-addr-host">
 				<input data-mini="true" type="text" name="devices[__IDX__][host]" value="" required
 					pattern="<?php echo htmlspecialchars(MBP_HOST_PATTERN); ?>" maxlength="253"
-					title="<?php echo htmlspecialchars($L["CONFIG.HOST_INVALID"]); ?>" placeholder="192.168.1.10">
+					title="<?php echo htmlspecialchars($L["CONFIG.HOST_INVALID"]); ?>" placeholder="<?php echo htmlspecialchars($L["CONFIG.HOST_PLACEHOLDER"]); ?>">
 				<span class="mbp-subhint"><?php echo $L["CONFIG.MODBUS_HOST_SUB"]; ?></span>
 			</div>
 			<span class="mbp-addr-sep">:</span>

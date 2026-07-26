@@ -27,7 +27,7 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["action"] ?? "") ==
 			if (file_exists($configfile)) {
 				copy($configfile, "$configfile.bak");
 			}
-			$yaml = mbp_config_to_yaml($parsed["config"], $logfile);
+			$yaml = mbp_config_to_yaml($parsed["config"]);
 			file_put_contents($configfile, $yaml);
 			exec(escapeshellarg($ctlscript) . " restart 2>&1");
 			$message = $L["EXPORT.IMPORT_OK"];

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Hält die Logdatei des Plugins klein. Das Steuerskript kürzt sie zwar auch bei jedem
+# Start, im Dauerbetrieb läuft aber sonst nichts, das die Grösse prüft - besonders im
+# Log-Level DEBUG wächst sie sonst schnell.
+#
+# Wird von LoxBerry als User loxberry aufgerufen (siehe /etc/cron.d/lbdefaults).
+
+MAILTO=""
+
+# Cron erbt die LoxBerry-Variablen nicht zuverlässig, deshalb hier explizit einlesen.
+set -a
+. /etc/environment
+set +a
+
+CTL="$LBPBIN/modbus-proxy/modbus-proxy-ctl.sh"
+
+[ -x "$CTL" ] && "$CTL" trimlog
+
+exit 0

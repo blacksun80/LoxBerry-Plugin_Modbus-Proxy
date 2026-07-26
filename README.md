@@ -11,15 +11,19 @@ Proxy, der die Anfragen seriell an das eigentliche Gerät weiterreicht.
 ## Funktionen dieses Plugins
 
 - **Konfiguration per GUI** statt Handbearbeitung der YAML-Datei: beliebig viele Modbus-Geräte
-  mit Ziel-Adresse, Timeout, Verbindungsverzögerung, Listen-Adresse und optionaler
-  Unit-ID-Umleitung.
+  mit Ziel-Adresse, Timeout, Verbindungsverzögerung, Port für die Clients und optionaler
+  Unit-ID-Umleitung. Alle Eingaben werden geprüft, doppelt vergebene Portnummern werden erkannt.
 - **Speichern** schreibt die Konfiguration und startet den Dienst automatisch neu, damit die
   Änderungen sofort aktiv sind.
 - **Status-Anzeige** (läuft/gestoppt, PID, installierte modbus-proxy-Version), aktualisiert sich
-  automatisch alle 5 Sekunden. Pro Gerät wird angezeigt, ob der Listen-Port erreichbar ist, wie
+  automatisch alle 5 Sekunden. Pro Gerät wird angezeigt, ob der Port erreichbar ist, wie
   viele Clients verbunden sind, wie viele Daten empfangen/gesendet wurden (mit Anzeige, ob gerade
   Daten fließen) und ob der Proxy aktuell mit dem Modbus-Gerät verbunden ist.
-- **Start/Stopp/Neustart** des Dienstes direkt aus der GUI.
+- **Start/Stopp/Neustart** des Dienstes direkt aus der GUI. Startet der Dienst nicht, zeigt die
+  Oberfläche den Grund im Klartext an.
+- **Ein gemeinsames Log** für Dienstmeldungen, Start-/Stopp-Vorgänge und Startfehler, direkt in
+  der GUI einsehbar und selbst aktualisierend. Es wird automatisch gekürzt und kann daher nicht
+  volllaufen. Der Log-Level ist umschaltbar und wird sofort übernommen.
 - **Export/Import** der Konfiguration als YAML-Datei (Backup oder Übertragung auf einen anderen
   LoxBerry).
 - **Update-fest:** die Konfiguration bleibt bei einem Plugin-Update erhalten (wird vor dem

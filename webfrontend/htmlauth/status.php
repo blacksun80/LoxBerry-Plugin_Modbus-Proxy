@@ -15,7 +15,7 @@ foreach ($cfg["devices"] as $d) {
 	$devices[] = [
 		"listen_port" => $port,
 		"url" => $d["host"] . ":" . (int)$d["device_port"],
-		"reachable" => $status["running"] && mbp_port_reachable($port),
+		"reachable" => $status["running"] && mbp_port_listening($port),
 		"clients" => $tr["client"]["conns"],
 		"rx" => $tr["client"]["rx"],
 		"tx" => $tr["client"]["tx"],
